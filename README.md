@@ -1,3 +1,5 @@
+[![PyPI](https://img.shields.io/pypi/v/patchnotes)](https://pypi.org/project/patchnotes)
+[![Python](https://img.shields.io/pypi/pyversions/patchnotes)](https://pypi.org/project/patchnotes)
 # patchnotes
 View at https://pypi.org/project/patchnotes/
 ___
