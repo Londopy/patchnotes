@@ -1,6 +1,6 @@
 # patchnotes
 
-Parse [Keep a Changelog](https://keepachangelog.com) formatted `CHANGELOG.md` files into structured Python objects.
+Parse [Keep a Changelog](https://keepachangelog.com) formatted `CHANGELOG.md` files into structured Python objects. Render to HTML, RSS, or plain text. Fetch directly from GitHub.
 
 **Zero dependencies. Pure Python. Typed.**
 
@@ -26,6 +26,8 @@ pip install patchnotes
 
 Requires Python 3.10+.
 
+---
+
 ## Usage
 
 ### Parse
@@ -39,11 +41,25 @@ cl = patchnotes.parse_file("CHANGELOG.md")
 # From a string
 cl = patchnotes.parse(raw_text)
 
-# From a URL (e.g. raw GitHub)
+# From any URL
 cl = patchnotes.Changelog.from_url(
     "https://raw.githubusercontent.com/user/repo/main/CHANGELOG.md"
 )
+
+# From a GitHub repo — just owner + repo name, no URL needed
+cl = patchnotes.Changelog.from_github("Londopy", "patchnotes")
+
+# Different branch or filename
+cl = patchnotes.Changelog.from_github(
+    "psf", "requests",
+    branch="main",
+    filename="HISTORY.md"   # also works with CHANGES.md, NEWS.md, etc.
+)
 ```
+
+`from_github` automatically falls back to the `master` branch if `main` returns a 404.
+
+---
 
 ### Access releases
 
@@ -80,13 +96,51 @@ for version, entry in cl.all_breaking_changes():
     print(f"v{version}: {entry.text}")
 ```
 
-### Serialize
+### Serialize to JSON
 
 ```python
-cl.to_dict()     # plain Python dict, JSON-safe
-cl.to_json()     # JSON string (indent=2 by default)
+cl.to_dict()        # plain Python dict, JSON-safe
+cl.to_json()        # JSON string (indent=2 by default)
 cl.to_json(indent=4)
 ```
+
+---
+
+## Rendering
+
+### HTML
+
+```python
+# Full standalone HTML page
+html = patchnotes.to_html(cl)
+with open("changelog.html", "w") as f:
+    f.write(html)
+
+# Bare <div> fragment for embedding in your own page
+fragment = patchnotes.to_html(cl, full_page=False)
+```
+
+### RSS
+
+```python
+rss = patchnotes.to_rss(cl, project_url="https://github.com/you/project")
+with open("changelog.rss", "w") as f:
+    f.write(rss)
+```
+
+Each versioned release becomes an `<item>`. Unreleased entries are skipped.
+
+### Plain text
+
+```python
+# Full summary
+print(patchnotes.to_text(cl))
+
+# Only the 3 most recent releases
+print(patchnotes.to_text(cl, max_releases=3))
+```
+
+---
 
 ## CLI
 
@@ -113,6 +167,8 @@ patchnotes CHANGELOG.md breaking
 patchnotes CHANGELOG.md json
 ```
 
+---
+
 ## Data model
 
 ```
@@ -137,10 +193,13 @@ Changelog
 ├── all_breaking_changes() → list[tuple[str, Entry]]
 ├── to_dict() → dict
 ├── to_json() → str
-└── from_url(url) → Changelog
+├── from_url(url) → Changelog
+└── from_github(owner, repo, branch, filename) → Changelog
 ```
 
 `ChangeType` values: `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`, `Breaking`
+
+---
 
 ## Changelog format
 
@@ -167,6 +226,8 @@ Changelog
 ### Security
 - Patched CVE-2024-1234
 ```
+
+---
 
 ## License
 
