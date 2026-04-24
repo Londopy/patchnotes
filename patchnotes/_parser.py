@@ -7,6 +7,7 @@ into structured Python objects.
 import re
 import json
 import urllib.request
+import urllib.error
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Optional
@@ -33,23 +34,14 @@ class Entry:
         return f"Entry({self.change_type.value}: {self.text!r})"
 
     def to_dict(self) -> dict:
-        return {
-            "text": self.text,
-            "change_type": self.change_type.value,
-        }
+        return {"text": self.text, "change_type": self.change_type.value}
 
 
 def _parse_semver(version: str) -> tuple:
-    """
-    Parse a version string into a sortable tuple.
-    Handles standard semver (1.2.3), partial versions (1.2), and
-    pre-release suffixes (1.0.0-alpha). 'Unreleased' sorts highest.
-    """
+    """Parse a version string into a sortable tuple."""
     if version.lower() == "unreleased":
         return (float("inf"),) * 3
-    # Strip leading 'v'
     v = version.lstrip("v")
-    # Take only the numeric part before any pre-release suffix
     numeric = re.split(r"[-+]", v)[0]
     parts = numeric.split(".")
     result = []
@@ -58,7 +50,6 @@ def _parse_semver(version: str) -> tuple:
             result.append(int(p))
         except ValueError:
             result.append(0)
-    # Pad to 3 components
     while len(result) < 3:
         result.append(0)
     return tuple(result)
@@ -123,10 +114,7 @@ class Changelog:
     def since_version(self, version: str) -> list[Release]:
         """Return all releases strictly newer than the given version."""
         threshold = _parse_semver(version)
-        return [
-            r for r in self.releases
-            if _parse_semver(r.version) > threshold
-        ]
+        return [r for r in self.releases if _parse_semver(r.version) > threshold]
 
     def get_version(self, version: str) -> Optional[Release]:
         for r in self.releases:
@@ -146,8 +134,6 @@ class Changelog:
         """
         Return all releases strictly between from_version (exclusive)
         and to_version (inclusive), ordered newest-first.
-
-        Example: diff("1.4.0", "2.1.0") returns [2.1.0, 2.0.0, 1.4.2]
         """
         from_v = _parse_semver(from_version)
         to_v = _parse_semver(to_version)
@@ -173,13 +159,75 @@ class Changelog:
 
     @classmethod
     def from_url(cls, url: str) -> "Changelog":
-        """Fetch and parse a remote CHANGELOG.md file."""
+        """
+        Fetch and parse a remote CHANGELOG.md from any URL.
+
+        Example::
+
+            cl = Changelog.from_url(
+                "https://raw.githubusercontent.com/user/repo/main/CHANGELOG.md"
+            )
+        """
         req = urllib.request.Request(
-            url,
-            headers={"User-Agent": "patchnotes-python/1.0"}
+            url, headers={"User-Agent": "patchnotes-python/1.0"}
         )
         with urllib.request.urlopen(req, timeout=10) as resp:
             text = resp.read().decode("utf-8", errors="replace")
+        return parse(text)
+
+    @classmethod
+    def from_github(
+        cls,
+        owner: str,
+        repo: str,
+        branch: str = "main",
+        filename: str = "CHANGELOG.md",
+    ) -> "Changelog":
+        """
+        Fetch and parse a CHANGELOG.md directly from a GitHub repository.
+
+        Automatically falls back to the 'master' branch if 'main' returns 404.
+
+        Args:
+            owner:    GitHub username or org (e.g. "Londopy").
+            repo:     Repository name (e.g. "patchnotes").
+            branch:   Branch name. Defaults to "main".
+            filename: File to fetch. Defaults to "CHANGELOG.md".
+                      Common alternatives: "CHANGES.md", "HISTORY.md", "NEWS.md".
+
+        Raises:
+            ValueError: If the file cannot be found.
+
+        Example::
+
+            cl = Changelog.from_github("Londopy", "patchnotes")
+            cl = Changelog.from_github("psf", "requests", filename="HISTORY.md")
+        """
+        def _fetch(branch_name: str) -> Optional[str]:
+            url = (
+                f"https://raw.githubusercontent.com/"
+                f"{owner}/{repo}/{branch_name}/{filename}"
+            )
+            req = urllib.request.Request(
+                url, headers={"User-Agent": "patchnotes-python/1.0"}
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    return resp.read().decode("utf-8", errors="replace")
+            except urllib.error.HTTPError as e:
+                if e.code == 404:
+                    return None
+                raise
+
+        text = _fetch(branch)
+        if text is None and branch == "main":
+            text = _fetch("master")
+        if text is None:
+            raise ValueError(
+                f"Could not find {filename!r} in {owner}/{repo} "
+                f"on branch {branch!r} (also tried 'master'). "
+                f"Check the owner, repo, branch, and filename."
+            )
         return parse(text)
 
     def __repr__(self):
@@ -212,25 +260,18 @@ def parse(text: str) -> Changelog:
     in_header = True
 
     for line in lines:
-        # Top-level title
         if line.startswith('# ') and in_header:
             changelog.title = line[2:].strip()
             continue
-
-        # Collect description lines before first release
         if in_header and not line.startswith('## '):
             if line.strip() and not line.startswith('#'):
                 changelog.description += line.strip() + ' '
             continue
-
-        # Unreleased block
         if UNRELEASED_HEADER.match(line):
             in_header = False
             current_release = Release(version="Unreleased", release_date=None, is_unreleased=True)
             changelog.releases.append(current_release)
             continue
-
-        # Versioned release header
         m = VERSION_HEADER.match(line)
         if m:
             in_header = False
@@ -242,15 +283,11 @@ def parse(text: str) -> Changelog:
                                       is_unreleased=False, yanked=yanked)
             changelog.releases.append(current_release)
             continue
-
-        # Change type subheader (### Added, ### Fixed, etc.)
         m = CHANGE_TYPE_HEADER.match(line)
         if m and current_release is not None:
             label = m.group(1).strip().lower()
             current_type = _TYPE_MAP.get(label, ChangeType.CHANGED)
             continue
-
-        # Bullet entry
         m = BULLET.match(line)
         if m and current_release is not None:
             current_release.entries.append(
