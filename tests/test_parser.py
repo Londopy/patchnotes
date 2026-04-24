@@ -313,7 +313,7 @@ class TestSerialization:
 class TestParseFile:
     def test_parse_file(self, tmp_path):
         f = tmp_path / "CHANGELOG.md"
-        f.write_text(SAMPLE)
+        f.write_text(SAMPLE, encoding="utf-8")
         cl = parse_file(str(f))
         assert cl.title == "My Awesome Library"
         assert len(cl.releases) == 5
