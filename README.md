@@ -1,5 +1,6 @@
 # patchnotes
-
+View at https://pypi.org/project/patchnotes/
+___
 Parse [Keep a Changelog](https://keepachangelog.com) formatted `CHANGELOG.md` files into structured Python objects.
 
 **Zero dependencies. Pure Python. Typed.**
