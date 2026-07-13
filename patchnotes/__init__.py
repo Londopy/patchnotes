@@ -12,7 +12,7 @@ Basic usage::
     # Strict mode for CI — raises ChangelogValidationError on spec violations
     cl = patchnotes.parse_file("CHANGELOG.md", strict=True)
 
-    # YAML changelogs (pip install patchnotes[yaml])
+    # YAML changelogs
     cl = patchnotes.parse_file("changelog.yml")
 
     # Validate without raising
@@ -59,7 +59,7 @@ from .formats import (
     register_format,
 )
 
-__version__ = "2.0.0"
+__version__ = "2.0.1"
 __all__ = [
     "parse",
     "parse_file",

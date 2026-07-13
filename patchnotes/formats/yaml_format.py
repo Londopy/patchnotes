@@ -2,10 +2,6 @@
 patchnotes.formats.yaml_format
 YAML changelog parser.
 
-Requires PyYAML, installed via the optional extra::
-
-    pip install patchnotes[yaml]
-
 Expected schema (all keys except ``releases`` optional)::
 
     title: My Project
@@ -41,7 +37,7 @@ _TYPE_MAP = {t.value.lower(): t for t in ChangeType}
 
 _MISSING_PYYAML_MSG = (
     "YAML changelog support requires PyYAML. "
-    "Install it with: pip install patchnotes[yaml]"
+    "Install it with: pip install PyYAML"
 )
 
 

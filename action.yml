@@ -28,7 +28,7 @@ inputs:
   version:
     description: "patchnotes version spec to install (pip requirement specifier)."
     required: false
-    default: "patchnotes[yaml]>=2.0.0"
+    default: "patchnotes>=2.0.1"
 
 outputs:
   latest-version:

@@ -2,6 +2,13 @@
 
 Parse, query, and validate changelogs in Python and CI.
 
+## [2.0.1] - 2026-07-13
+
+### Changed
+
+- PyYAML is now a required dependency, so YAML changelog support works out of the box with plain `pip install patchnotes`.
+- CI publish workflow installs the package before running tests.
+
 ## [2.0.0] - 2026-07-13
 
 ### Breaking

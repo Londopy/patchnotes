@@ -4,12 +4,12 @@ build-backend = "hatchling.build"
 
 [project]
 name = "patchnotes"
-version = "2.0.0"
+version = "2.0.1"
 description = "Parse, query, and validate changelogs (Keep a Changelog markdown, YAML) in Python and CI"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"
-dependencies = []
+dependencies = ["PyYAML>=6.0"]
 keywords = ["changelog", "keepachangelog", "semver", "release", "parser"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -24,9 +24,6 @@ classifiers = [
     "Topic :: Text Processing :: Markup :: Markdown",
     "Typing :: Typed",
 ]
-
-[project.optional-dependencies]
-yaml = ["PyYAML>=6.0"]
 
 [project.scripts]
 patchnotes = "patchnotes._cli:main"

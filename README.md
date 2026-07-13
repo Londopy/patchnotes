@@ -1,8 +1,14 @@
 # patchnotes
 
+[![PyPI](https://img.shields.io/pypi/v/patchnotes)](https://pypi.org/project/patchnotes/)
+[![Python versions](https://img.shields.io/pypi/pyversions/patchnotes)](https://pypi.org/project/patchnotes/)
+[![Publish to PyPI](https://github.com/Londopy/patchnotes/actions/workflows/publish.yml/badge.svg)](https://github.com/Londopy/patchnotes/actions/workflows/publish.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Keep a Changelog](https://img.shields.io/badge/changelog-keep--a--changelog-orange)](https://keepachangelog.com)
+
 Parse [Keep a Changelog](https://keepachangelog.com) formatted `CHANGELOG.md` files — and YAML changelogs — into structured Python objects. Query, diff, validate, and render to HTML, RSS, or plain text. Built for use in Python code, shell scripts, and CI/CD.
 
-**Zero required dependencies. Pure Python. Typed.**
+**Pure Python. Fully typed. YAML support included.**
 
 ```python
 import patchnotes
@@ -22,8 +28,7 @@ for r in cl.diff("1.4.0", "2.1.0"):
 ## Install
 
 ```bash
-pip install patchnotes          # core (zero dependencies)
-pip install patchnotes[yaml]    # + YAML changelog support
+pip install patchnotes
 ```
 
 Requires Python 3.10+.
@@ -39,7 +44,7 @@ import patchnotes
 
 # From a file (format auto-detected from extension/content)
 cl = patchnotes.parse_file("CHANGELOG.md")
-cl = patchnotes.parse_file("changelog.yml")     # needs patchnotes[yaml]
+cl = patchnotes.parse_file("changelog.yml")     # YAML works out of the box
 
 # From a string
 cl = patchnotes.parse(raw_text)
