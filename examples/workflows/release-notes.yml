@@ -1,0 +1,39 @@
+# Copy to .github/workflows/release-notes.yml in your repo.
+# On tag push: validates the changelog, then uses the latest release's
+# notes as the body of the GitHub Release.
+name: Release with changelog notes
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install patchnotes
+        run: pip install patchnotes
+
+      - name: Validate changelog (strict)
+        run: patchnotes CHANGELOG.md validate --strict
+
+      - name: Check tag matches latest changelog version
+        run: |
+          LATEST=$(patchnotes CHANGELOG.md --format json latest | jq -r .version)
+          TAG="${GITHUB_REF_NAME#v}"
+          if [ "$LATEST" != "$TAG" ]; then
+            echo "::error::Tag v$TAG does not match latest changelog version $LATEST"
+            exit 1
+          fi
+
+      - name: Extract release notes
+        run: patchnotes CHANGELOG.md latest > release-notes.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: release-notes.txt

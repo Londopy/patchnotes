@@ -1,8 +1,8 @@
 # patchnotes
 
-Parse [Keep a Changelog](https://keepachangelog.com) formatted `CHANGELOG.md` files into structured Python objects. Render to HTML, RSS, or plain text. Fetch directly from GitHub.
+Parse [Keep a Changelog](https://keepachangelog.com) formatted `CHANGELOG.md` files — and YAML changelogs — into structured Python objects. Query, diff, validate, and render to HTML, RSS, or plain text. Built for use in Python code, shell scripts, and CI/CD.
 
-**Zero dependencies. Pure Python. Typed.**
+**Zero required dependencies. Pure Python. Typed.**
 
 ```python
 import patchnotes
@@ -11,6 +11,7 @@ cl = patchnotes.parse_file("CHANGELOG.md")
 
 cl.latest()        # Release(v2.1.0, 2024-11-15, 6 entries)
 cl.unreleased()    # Release(vUnreleased, unreleased, 2 entries)
+cl.validate()      # [] — or a list of issues with line numbers
 
 # What broke between 1.4.0 and 2.1.0?
 for r in cl.diff("1.4.0", "2.1.0"):
@@ -21,7 +22,8 @@ for r in cl.diff("1.4.0", "2.1.0"):
 ## Install
 
 ```bash
-pip install patchnotes
+pip install patchnotes          # core (zero dependencies)
+pip install patchnotes[yaml]    # + YAML changelog support
 ```
 
 Requires Python 3.10+.
@@ -35,11 +37,13 @@ Requires Python 3.10+.
 ```python
 import patchnotes
 
-# From a file
+# From a file (format auto-detected from extension/content)
 cl = patchnotes.parse_file("CHANGELOG.md")
+cl = patchnotes.parse_file("changelog.yml")     # needs patchnotes[yaml]
 
 # From a string
 cl = patchnotes.parse(raw_text)
+cl = patchnotes.parse(raw_yaml, format="yaml")
 
 # From any URL
 cl = patchnotes.Changelog.from_url(
@@ -58,6 +62,80 @@ cl = patchnotes.Changelog.from_github(
 ```
 
 `from_github` automatically falls back to the `master` branch if `main` returns a 404.
+
+---
+
+### Validation and strict mode
+
+The parser is **lenient by default**: off-standard input (a `2024/01/01` date, a `## 1.2.0` header without brackets, a `### Improvements` section) is recovered with the most sensible interpretation and recorded as an issue instead of crashing or silently misparsing.
+
+```python
+cl = patchnotes.parse_file("CHANGELOG.md")
+
+for issue in cl.validate():
+    print(issue)
+    # [ERROR] PN101 line 12: date '2024/01/01' is not ISO 8601 ...
+    # [WARNING] PN201 line 30: non-standard section 'Improvements' ...
+
+cl.is_valid()              # True if no ERROR-severity issues
+cl.is_valid(strict=True)   # True only if there are zero issues
+```
+
+**Strict mode** raises instead — useful when a malformed changelog should stop the pipeline:
+
+```python
+from patchnotes import ChangelogValidationError
+
+try:
+    cl = patchnotes.parse_file("CHANGELOG.md", strict=True)
+except ChangelogValidationError as e:
+    for issue in e.issues:
+        print(issue)
+    raise
+```
+
+Issue codes are stable (grep-able in CI logs): `PN1xx` are errors (data was lost or guessed — bad dates, duplicate versions, malformed headers), `PN2xx` are warnings (recoverable style problems — unknown section names, out-of-order or empty releases), `PN3xx` are YAML schema problems.
+
+---
+
+### Formats
+
+Formats are pluggable. `markdown` (Keep a Changelog) and `yaml` are built in; `format="auto"` picks by file extension, then content.
+
+YAML changelog schema:
+
+```yaml
+title: My Project
+description: What the project does.
+releases:
+  - version: "2.0.0"
+    date: 2024-06-01
+    changes:
+      breaking:
+        - Renamed foo() to bar()
+      added:
+        - New thing
+  - unreleased: true
+    changes:
+      fixed:
+        - Pending fix
+```
+
+Adding your own format (no core changes needed):
+
+```python
+from patchnotes import Changelog, FormatParser, register_format
+
+class MyFormat(FormatParser):
+    name = "myformat"
+    extensions = (".mycl",)
+
+    def parse(self, text: str) -> Changelog:
+        ...  # lenient: record problems on changelog.issues, never raise
+
+register_format(MyFormat())
+cl = patchnotes.parse(text, format="myformat")
+```
 
 ---
 
@@ -167,6 +245,78 @@ patchnotes CHANGELOG.md breaking
 patchnotes CHANGELOG.md json
 ```
 
+### Shell scripting
+
+Every command accepts `--format json` for machine-readable output, and `-` reads from stdin:
+
+```bash
+# Latest version number, nothing else
+patchnotes CHANGELOG.md --format json latest | jq -r .version
+
+# Pipe from anywhere
+curl -s https://raw.githubusercontent.com/user/repo/main/CHANGELOG.md \
+  | patchnotes - latest
+
+# Exit-code-only check in a script
+if ! patchnotes CHANGELOG.md --quiet validate; then
+    echo "changelog is broken" >&2
+    exit 1
+fi
+```
+
+Exit codes: `0` success/valid · `1` validation failed, version not found, or parse error · `2` usage error (bad arguments, missing file).
+
+### Validation in CI
+
+```bash
+patchnotes CHANGELOG.md validate            # fail on errors only
+patchnotes CHANGELOG.md validate --strict   # fail on warnings too
+```
+
+Inside GitHub Actions, `validate` automatically emits `::error`/`::warning` annotations with file and line, so problems show up inline on the PR diff. (Force this locally with `--github`.)
+
+---
+
+## GitHub Actions
+
+Use the bundled composite action:
+
+```yaml
+# .github/workflows/validate-changelog.yml
+name: Validate changelog
+on:
+  pull_request:
+    paths: ["CHANGELOG.md"]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Londopy/patchnotes@v2
+        with:
+          file: CHANGELOG.md
+          strict: "true"
+```
+
+Or plain shell (works on any CI):
+
+```yaml
+      - run: |
+          pip install patchnotes
+          patchnotes CHANGELOG.md validate --strict
+```
+
+The action also exposes the latest version as an output:
+
+```yaml
+      - uses: Londopy/patchnotes@v2
+        id: changelog
+      - run: echo "Latest release is ${{ steps.changelog.outputs.latest-version }}"
+```
+
+See [`examples/workflows/`](examples/workflows/) for complete workflows, including publishing GitHub Releases from changelog notes.
+
 ---
 
 ## Data model
@@ -191,10 +341,18 @@ Changelog
 ├── since_version(v) → list[Release]
 ├── diff(from, to) → list[Release]
 ├── all_breaking_changes() → list[tuple[str, Entry]]
+├── validate() → list[ValidationIssue]
+├── is_valid(strict=False) → bool
 ├── to_dict() → dict
 ├── to_json() → str
 ├── from_url(url) → Changelog
 └── from_github(owner, repo, branch, filename) → Changelog
+
+ValidationIssue
+├── code: str          # stable, e.g. "PN101"
+├── message: str
+├── severity: "error" | "warning"
+└── line: int | None
 ```
 
 `ChangeType` values: `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`, `Breaking`

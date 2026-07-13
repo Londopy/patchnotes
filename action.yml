@@ -1,0 +1,60 @@
+# Composite GitHub Action for validating changelogs with patchnotes.
+#
+# Usage in a workflow:
+#
+#   - uses: Londopy/patchnotes@v2
+#     with:
+#       file: CHANGELOG.md
+#       strict: "true"
+#
+name: "patchnotes changelog validator"
+description: >-
+  Validate a Keep a Changelog / YAML changelog. Fails the job on spec
+  violations and annotates the offending lines in the PR.
+author: "Londopy"
+branding:
+  icon: "file-text"
+  color: "green"
+
+inputs:
+  file:
+    description: "Path to the changelog file to validate."
+    required: false
+    default: "CHANGELOG.md"
+  strict:
+    description: "Treat warnings as failures ('true' or 'false')."
+    required: false
+    default: "false"
+  version:
+    description: "patchnotes version spec to install (pip requirement specifier)."
+    required: false
+    default: "patchnotes[yaml]>=2.0.0"
+
+outputs:
+  latest-version:
+    description: "The latest released version found in the changelog."
+    value: ${{ steps.query.outputs.latest-version }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install patchnotes
+      shell: bash
+      run: python -m pip install --quiet "${{ inputs.version }}"
+
+    - name: Validate changelog
+      shell: bash
+      run: |
+        ARGS=""
+        if [ "${{ inputs.strict }}" = "true" ]; then
+          ARGS="--strict"
+        fi
+        patchnotes "${{ inputs.file }}" validate $ARGS
+
+    - name: Export latest version
+      id: query
+      shell: bash
+      run: |
+        LATEST=$(patchnotes "${{ inputs.file }}" --format json latest \
+          | python -c "import json,sys; d=json.load(sys.stdin); print(d['version'] if d else '')")
+        echo "latest-version=$LATEST" >> "$GITHUB_OUTPUT"

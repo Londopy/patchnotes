@@ -1,64 +1,35 @@
-# My Awesome Library
+# patchnotes
 
-A library for doing awesome things.
+Parse, query, and validate changelogs in Python and CI.
 
-## [Unreleased]
-
-### Added
-- Dark mode support
-- New `export_csv()` function
-
-## [2.1.0] - 2024-11-15
-
-### Added
-- WebSocket support for real-time updates
-- New `batch_process()` method for handling multiple items at once
-- Configurable retry logic with exponential backoff
-
-### Fixed
-- Memory leak in connection pool when connections timeout
-- Incorrect timezone handling in `parse_datetime()` for UTC offsets
-
-### Changed
-- Improved error messages to include context and suggested fixes
-
-## [2.0.0] - 2024-09-01
+## [2.0.0] - 2026-07-13
 
 ### Breaking
-- Renamed `connect()` to `open_connection()` — update all call sites
-- Removed deprecated `legacy_auth` parameter from `authenticate()`
+
+- The internal `patchnotes._parser` module was split into `_models`, `_dispatch`, and the `patchnotes.formats` package. All public imports (`patchnotes.parse`, `patchnotes.Changelog`, ...) are unchanged, and `patchnotes._parser` remains as a compatibility shim.
+- The parser is now lenient by default and recovers from off-standard input (loose dates, bracket-less headers, unknown section names) instead of silently misparsing it. Recovered constructs are reported via `Changelog.validate()`, so entry counts and dates may differ from 1.x on malformed files.
 
 ### Added
-- Full async/await support across all public API methods
-- Plugin architecture for custom data processors
-- Type stubs (.pyi files) for better IDE support
 
-### Removed
-- Dropped support for Python 3.8 and 3.9
-- Removed `SyncClient` class — use `AsyncClient` with `asyncio.run()`
+- Validation API: `Changelog.validate()`, `Changelog.is_valid()`, `patchnotes.validate()`, and `patchnotes.validate_file()` return structured `ValidationIssue` objects with stable codes, severities, and line numbers.
+- Strict mode: `parse(text, strict=True)` and `parse_file(path, strict=True)` raise `ChangelogValidationError` on spec violations — built for CI/CD checks.
+- Pluggable format registry: `patchnotes.formats.register_format()` lets third parties add new changelog formats; `format="auto"` detects by extension and content.
+- YAML changelog format via the optional extra `pip install patchnotes[yaml]`.
+- CLI `validate` subcommand with meaningful exit codes (0 valid, 1 invalid, 2 usage error) and a `--strict` flag that treats warnings as failures.
+- CLI `--format json` on every subcommand for shell scripting, `-` to read from stdin, and `--quiet` for exit-code-only usage.
+- GitHub Actions workflow annotations (`::error`/`::warning` with file and line) — automatic when running inside Actions, or forced with `--github`.
+- Composite GitHub Action (`action.yml`) so workflows can write `uses: Londopy/patchnotes@v2`.
+- Common off-spec section aliases ("Bug Fixes", "Features", "Improvements", ...) are mapped to their Keep a Changelog equivalents with a warning.
 
-### Security
-- Patched SSRF vulnerability in URL validation logic (CVE-2024-1234)
-
-## [1.4.2] - 2024-06-10
-
-### Fixed
-- Crash when input file contains null bytes
-- Race condition in multi-threaded download manager
-- Off-by-one error in pagination cursor calculation
-
-### Security
-- Updated dependencies to address CVE-2024-5678 in requests library
-
-## [1.4.0] - 2024-04-22
+## [1.1.0] - 2026-05-02
 
 ### Added
-- Support for gzip-compressed responses
-- `Changelog.from_url()` class method for remote changelogs
 
-### Changed
-- Default timeout increased from 10s to 30s
-- Logging now uses structured JSON format
+- `Changelog.from_github()` with automatic `master` branch fallback.
+- `to_rss()` renderer.
 
-### Deprecated
-- `SyncClient` is deprecated and will be removed in v2.0.0
+## [1.0.0] - 2026-03-20
+
+### Added
+
+- Initial release: Keep a Changelog parser, `to_html()`/`to_text()` renderers, and the `patchnotes` CLI.

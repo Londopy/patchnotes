@@ -1,0 +1,26 @@
+# Copy to .github/workflows/validate-changelog.yml in your repo.
+# Fails the PR if CHANGELOG.md violates the Keep a Changelog spec,
+# with inline annotations on the offending lines.
+name: Validate changelog
+
+on:
+  pull_request:
+    paths:
+      - "CHANGELOG.md"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Option A — use the published action:
+      - uses: Londopy/patchnotes@v2
+        with:
+          file: CHANGELOG.md
+          strict: "true"
+
+      # Option B — plain shell (works on any CI):
+      # - run: |
+      #     pip install patchnotes
+      #     patchnotes CHANGELOG.md validate --strict
