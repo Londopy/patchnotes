@@ -280,6 +280,37 @@ patchnotes CHANGELOG.md validate --strict   # fail on warnings too
 
 Inside GitHub Actions, `validate` automatically emits `::error`/`::warning` annotations with file and line, so problems show up inline on the PR diff. (Force this locally with `--github`.)
 
+### Example: catching a broken changelog in a PR
+
+Say a teammate opens a PR with this edit to `CHANGELOG.md`:
+
+```markdown
+## [2.1.0] - 2026/08/02
+
+### Improvments
+- Faster parsing
+```
+
+Two problems: the date isn't ISO 8601, and `Improvments` isn't a Keep a Changelog section (it's also misspelled). Locally, `validate` reports both with line numbers:
+
+```console
+$ patchnotes CHANGELOG.md validate --strict
+  [ERROR] PN101 line 3: date '2026/08/02' is not ISO 8601 (expected YYYY-MM-DD); interpreted as 2026-08-02
+  [WARNING] PN201 line 5: unknown change type 'Improvments'; entries filed under 'Changed'
+CHANGELOG.md: FAIL (strict) — 1 error(s), 1 warning(s)
+$ echo $?
+1
+```
+
+In a GitHub Actions run, the same command emits workflow annotations instead:
+
+```
+::error file=CHANGELOG.md,line=3,title=patchnotes PN101::date '2026/08/02' is not ISO 8601 (expected YYYY-MM-DD); interpreted as 2026-08-02
+::warning file=CHANGELOG.md,line=5,title=patchnotes PN201::unknown change type 'Improvments'; entries filed under 'Changed'
+```
+
+GitHub renders these as error/warning boxes pinned to lines 3 and 5 in the PR's "Files changed" tab, the check fails, and (with branch protection) the PR can't merge until the changelog is fixed. Note that lenient parsing still recovered both problems — `parse()` would happily return the release with the date read as 2026-08-02 — strict mode is what turns recovery into rejection.
+
 ---
 
 ## GitHub Actions
