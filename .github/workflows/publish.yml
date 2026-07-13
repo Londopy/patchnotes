@@ -1,0 +1,42 @@
+# Publishes to PyPI via trusted publishing (no API tokens needed).
+# Fires on version tags (v2.0.0, v2.1.0, ...) and can be run manually
+# from the Actions tab for an existing tag.
+name: Publish to PyPI
+
+on:
+  push:
+    tags: ["v[0-9]*"]   # version tags only — ignores the moving 'v2' action tag
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pytest pyyaml
+      - run: pytest tests/ -q
+      - name: Validate own changelog (strict)
+        run: |
+          pip install .
+          patchnotes CHANGELOG.md validate --strict
+
+  publish:
+    needs: test
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write   # required for PyPI trusted publishing
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build sdist and wheel
+        run: |
+          pip install build
+          python -m build
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
