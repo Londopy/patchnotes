@@ -48,6 +48,10 @@ from ._render import (
     to_rss,
     to_text,
 )
+from ._write import (
+    to_markdown,
+    to_yaml,
+)
 from ._validation import (
     ChangelogValidationError,
     Severity,
@@ -59,7 +63,7 @@ from .formats import (
     register_format,
 )
 
-__version__ = "2.0.1"
+__version__ = "2.1.0"
 __all__ = [
     "parse",
     "parse_file",
@@ -78,5 +82,7 @@ __all__ = [
     "to_html",
     "to_rss",
     "to_text",
+    "to_markdown",
+    "to_yaml",
     "__version__",
 ]

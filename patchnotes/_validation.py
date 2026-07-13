@@ -60,6 +60,8 @@ VERSIONS_OUT_OF_ORDER = "PN202"  # releases not newest-first
 EMPTY_RELEASE = "PN203"          # release header with no entries
 NO_RELEASES = "PN204"            # nothing parseable in the document
 NON_SEMVER_VERSION = "PN205"     # version string isn't semver-ish
+MISSING_COMPARE_LINK = "PN206"   # release lacks a [version]: url footnote
+ORPHAN_COMPARE_LINK = "PN207"    # link footnote for a version that doesn't exist
 YAML_SCHEMA = "PN301"            # YAML document doesn't match expected schema
 
 

@@ -1,0 +1,30 @@
+# pre-commit hooks for patchnotes.
+#
+# Usage in a project's .pre-commit-config.yaml:
+#
+#   repos:
+#     - repo: https://github.com/Londopy/patchnotes
+#       rev: v2.1.0
+#       hooks:
+#         - id: patchnotes-validate
+#
+- id: patchnotes-validate
+  name: Validate changelog (patchnotes)
+  description: Fail the commit if the changelog violates the Keep a Changelog spec.
+  entry: patchnotes validate
+  language: python
+  files: (?i)^changelog\.(md|markdown|ya?ml)$
+
+- id: patchnotes-validate-strict
+  name: Validate changelog, strict (patchnotes)
+  description: Like patchnotes-validate, but warnings also fail the commit.
+  entry: patchnotes validate --strict
+  language: python
+  files: (?i)^changelog\.(md|markdown|ya?ml)$
+
+- id: patchnotes-fix
+  name: Auto-fix changelog (patchnotes)
+  description: Rewrite the changelog in normalized, spec-compliant form.
+  entry: patchnotes fix
+  language: python
+  files: (?i)^changelog\.(md|markdown|ya?ml)$

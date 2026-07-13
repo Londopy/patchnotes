@@ -2,6 +2,19 @@
 
 Parse, query, and validate changelogs in Python and CI.
 
+## [2.1.0] - 2026-07-13
+
+### Added
+
+- Release automation: `Changelog.bump("2.1.0")` and `patchnotes CHANGELOG.md bump 2.1.0` move the [Unreleased] entries into a new dated release, keeping an empty [Unreleased] section and maintaining compare-link footnotes.
+- `patchnotes CHANGELOG.md unreleased --fail-if-empty` exits 1 when there are no unreleased entries, so CI can require a changelog entry in every PR.
+- Write support: `to_markdown()` (with optional compare-link generation via `repo_url=`) and `to_yaml()` enable round-tripping and format conversion.
+- `patchnotes changelog.yml convert CHANGELOG.md` converts between markdown and YAML changelogs in either direction.
+- `patchnotes CHANGELOG.md fix` rewrites an off-spec changelog in normalized form, applying every correction the lenient parser already recovers.
+- Compare-link footnotes (`[1.2.0]: https://.../compare/v1.1.0...v1.2.0`) are now parsed into `Changelog.links` and validated: missing (PN206) and orphaned (PN207) links are reported as warnings.
+- pre-commit hooks (`.pre-commit-hooks.yaml`): `patchnotes-validate`, `patchnotes-validate-strict`, and `patchnotes-fix`.
+- `validate` and `fix` accept the file after the command (`patchnotes validate CHANGELOG.md`), matching how pre-commit passes filenames.
+
 ## [2.0.1] - 2026-07-13
 
 ### Changed

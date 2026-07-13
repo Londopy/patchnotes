@@ -118,6 +118,8 @@ class Changelog:
     releases: list[Release] = field(default_factory=list)
     title: str = "Changelog"
     description: str = ""
+    #: Keep a Changelog compare-link footnotes: {"1.2.0": "https://.../compare/..."}.
+    links: dict = field(default_factory=dict)
     #: Issues collected while parsing (lenient mode). Excluded from repr
     #: and from to_dict() for backward compatibility; use validate().
     issues: list[ValidationIssue] = field(default_factory=list, repr=False, compare=False)
@@ -253,7 +255,116 @@ class Changelog:
                     )
                 )
             prev_key = key
+
+        # Compare-link footnotes are only checked when the changelog uses them.
+        if self.links:
+            link_keys = {k.lower() for k in self.links}
+            known = {r.version.lower() for r in self.releases}
+            for r in self.releases:
+                if not r.is_unreleased and r.version.lower() not in link_keys:
+                    issues.append(
+                        ValidationIssue(
+                            _v.MISSING_COMPARE_LINK,
+                            f"release {r.version!r} has no [version]: url "
+                            "link footnote",
+                            Severity.WARNING,
+                        )
+                    )
+            for k in self.links:
+                if k.lower() != "unreleased" and k.lower() not in known:
+                    issues.append(
+                        ValidationIssue(
+                            _v.ORPHAN_COMPARE_LINK,
+                            f"link footnote {k!r} does not match any release",
+                            Severity.WARNING,
+                        )
+                    )
         return issues
+
+    # ── Release automation ────────────────────────────────────────────────
+
+    def bump(
+        self,
+        version: str,
+        release_date: Optional[date] = None,
+        keep_unreleased: bool = True,
+    ) -> Release:
+        """
+        Move the [Unreleased] entries into a new dated release.
+
+        Args:
+            version:         The new version number (e.g. "2.1.0").
+            release_date:    Release date; defaults to today.
+            keep_unreleased: Keep an empty [Unreleased] section on top
+                             (Keep a Changelog convention). Default True.
+
+        Returns:
+            The newly created Release.
+
+        Raises:
+            ValueError: If there are no unreleased entries, or the version
+                        already exists.
+
+        Example::
+
+            cl = patchnotes.parse_file("CHANGELOG.md")
+            cl.bump("2.1.0")
+            with open("CHANGELOG.md", "w") as f:
+                f.write(patchnotes.to_markdown(cl))
+        """
+        u = self.unreleased()
+        if u is None or not u.entries:
+            raise ValueError(
+                "no unreleased changes to release — the [Unreleased] "
+                "section is missing or empty"
+            )
+        if any(r.version == version for r in self.releases):
+            raise ValueError(f"version {version!r} already exists in the changelog")
+
+        previous = self.latest()
+        new_release = Release(
+            version=version,
+            release_date=release_date or date.today(),
+            is_unreleased=False,
+            entries=list(u.entries),
+        )
+        idx = self.releases.index(u)
+        self.releases.insert(idx + 1, new_release)
+        u.entries = []
+        if not keep_unreleased:
+            self.releases.remove(u)
+
+        self._refresh_links_after_bump(version, previous)
+        return new_release
+
+    def _refresh_links_after_bump(
+        self, version: str, previous: Optional[Release]
+    ) -> None:
+        """Maintain compare-link footnotes, if the changelog uses them."""
+        from ._write import _COMPARE_RE  # lazy: avoids circular import
+
+        base = None
+        prefix = "v"
+        for url in self.links.values():
+            m = _COMPARE_RE.match(url)
+            if m:
+                base = m.group("base")
+                # Infer the tag prefix from the 'from' side — the 'to' side
+                # may be HEAD (in the Unreleased link).
+                prefix = "v" if m.group("from").startswith("v") else ""
+                break
+        if base is None:
+            return
+        tag = f"{prefix}{version}"
+        if previous is not None:
+            self.links[version] = (
+                f"{base}/compare/{prefix}{previous.version}...{tag}"
+            )
+        else:
+            self.links[version] = f"{base}/releases/tag/{tag}"
+        for k in list(self.links):
+            if k.lower() == "unreleased":
+                self.links[k] = f"{base}/compare/{tag}...HEAD"
 
     # ── Serialization ─────────────────────────────────────────────────────
 
@@ -261,6 +372,7 @@ class Changelog:
         return {
             "title": self.title,
             "description": self.description,
+            "links": dict(self.links),
             "releases": [r.to_dict() for r in self.releases],
         }
 

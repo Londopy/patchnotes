@@ -187,6 +187,39 @@ cl.to_json()        # JSON string (indent=2 by default)
 cl.to_json(indent=4)
 ```
 
+### Write it back out
+
+Parsing is only half the trip — `to_markdown()` and `to_yaml()` render a
+Changelog back to text, so you can modify programmatically and save:
+
+```python
+cl = patchnotes.parse_file("CHANGELOG.md")
+
+md = patchnotes.to_markdown(cl)
+
+# Generate the spec's compare-link footnotes while you're at it:
+# [2.1.0]: https://github.com/you/project/compare/v2.0.1...v2.1.0
+md = patchnotes.to_markdown(cl, repo_url="https://github.com/you/project")
+
+yml = patchnotes.to_yaml(cl)      # round-trips through the YAML format
+```
+
+### Release automation
+
+`bump()` moves the `[Unreleased]` entries into a new dated release — the
+manual step everyone forgets on release day:
+
+```python
+cl = patchnotes.parse_file("CHANGELOG.md")
+cl.bump("2.1.0")                       # date defaults to today
+with open("CHANGELOG.md", "w") as f:
+    f.write(patchnotes.to_markdown(cl))
+```
+
+It keeps an empty `[Unreleased]` section on top, refuses to release an
+empty section or a duplicate version, and updates compare-link footnotes
+if the changelog uses them.
+
 ---
 
 ## Rendering
@@ -248,6 +281,16 @@ patchnotes CHANGELOG.md breaking
 
 # Dump as JSON
 patchnotes CHANGELOG.md json
+
+# Release day: move [Unreleased] into a new dated release
+patchnotes CHANGELOG.md bump 2.1.0
+
+# Convert between formats (either direction)
+patchnotes changelog.yml convert CHANGELOG.md
+patchnotes CHANGELOG.md convert changelog.yml
+
+# Rewrite an off-spec changelog in normalized form
+patchnotes CHANGELOG.md fix
 ```
 
 ### Shell scripting
@@ -276,6 +319,9 @@ Exit codes: `0` success/valid · `1` validation failed, version not found, or pa
 ```bash
 patchnotes CHANGELOG.md validate            # fail on errors only
 patchnotes CHANGELOG.md validate --strict   # fail on warnings too
+
+# Require a changelog entry in every PR
+patchnotes CHANGELOG.md unreleased --fail-if-empty
 ```
 
 Inside GitHub Actions, `validate` automatically emits `::error`/`::warning` annotations with file and line, so problems show up inline on the PR diff. (Force this locally with `--github`.)
@@ -352,6 +398,21 @@ The action also exposes the latest version as an output:
 ```
 
 See [`examples/workflows/`](examples/workflows/) for complete workflows, including publishing GitHub Releases from changelog notes.
+
+---
+
+## pre-commit
+
+Validate (or auto-fix) the changelog on every commit:
+
+```yaml
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/Londopy/patchnotes
+    rev: v2.1.0
+    hooks:
+      - id: patchnotes-validate        # or patchnotes-validate-strict / patchnotes-fix
+```
 
 ---
 

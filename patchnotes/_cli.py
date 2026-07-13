@@ -39,13 +39,24 @@ COMMANDS = {
     "breaking": 0,
     "json": 0,
     "validate": 0,
+    "bump": 1,
+    "convert": 1,
+    "fix": 0,
 }
+
+#: commands that accept an optional trailing file argument
+#: (pre-commit passes matched filenames after the command:
+#:  `patchnotes validate CHANGELOG.md`)
+_TRAILING_FILE_OK = ("validate", "fix")
 
 
 def _bind_params(parser, args) -> None:
     """Validate parameter counts and bind them to named attributes."""
     expected = COMMANDS.get(args.command, 0)
     got = len(args.params)
+    if args.command in _TRAILING_FILE_OK and got == expected + 1:
+        args.file = args.params.pop()
+        got -= 1
     if got != expected:
         parser.error(
             f"command {args.command or '(summary)'!s} takes {expected} "
@@ -55,6 +66,10 @@ def _bind_params(parser, args) -> None:
         args.release_version = args.params[0]
     elif args.command == "diff":
         args.from_version, args.to_version = args.params
+    elif args.command == "bump":
+        args.new_version = args.params[0]
+    elif args.command == "convert":
+        args.output_path = args.params[0]
 
 
 def main(argv=None) -> int:
@@ -104,11 +119,30 @@ def main(argv=None) -> int:
         "(auto-enabled when GITHUB_ACTIONS=true)",
     )
     parser.add_argument(
+        "--fail-if-empty",
+        action="store_true",
+        help="With 'unreleased': exit 1 when there are no unreleased "
+        "entries (enforce changelog updates in PRs)",
+    )
+    parser.add_argument(
+        "--date",
+        metavar="YYYY-MM-DD",
+        help="With 'bump': release date (default: today)",
+    )
+    parser.add_argument(
+        "--repo-url",
+        metavar="URL",
+        help="With 'bump'/'fix'/'convert': regenerate compare-link "
+        "footnotes for this repository "
+        "(e.g. https://github.com/you/project)",
+    )
+    parser.add_argument(
         "command",
         nargs="?",
         metavar="COMMAND",
         help="One of: latest, unreleased, show VERSION, diff FROM TO, "
-        "breaking, json, validate (default: summary of all releases)",
+        "breaking, json, validate, fix, bump VERSION, convert OUTPUT "
+        "(default: summary of all releases)",
     )
     parser.add_argument(
         "params",
@@ -165,9 +199,10 @@ def main(argv=None) -> int:
     if args.command == "validate":
         return _cmd_validate(cl, args, strict=strict, github=github)
 
-    # Outside `validate`, --strict means "refuse to operate on a broken file"
-    # (ERROR-severity issues; use `validate --strict` to also fail on warnings).
-    if strict:
+    # Outside `validate`/`fix`, --strict means "refuse to operate on a
+    # broken file" (ERROR-severity issues; use `validate --strict` to also
+    # fail on warnings). `fix` is exempt: repairing broken files is its job.
+    if strict and args.command != "fix":
         issues = cl.validate()
         if any(i.severity is Severity.ERROR for i in issues):
             for i in issues:
@@ -184,7 +219,21 @@ def main(argv=None) -> int:
     if args.command == "latest":
         return _cmd_single(cl.latest(), "No releases found.", args)
     if args.command == "unreleased":
-        return _cmd_single(cl.unreleased(), "No unreleased changes.", args)
+        u = cl.unreleased()
+        if args.fail_if_empty and (u is None or not u.entries):
+            print(
+                "Error: no unreleased changes found — add an entry to the "
+                "[Unreleased] section.",
+                file=sys.stderr,
+            )
+            return EXIT_FAIL
+        return _cmd_single(u, "No unreleased changes.", args)
+    if args.command == "bump":
+        return _cmd_bump(cl, args)
+    if args.command == "convert":
+        return _cmd_convert(cl, args)
+    if args.command == "fix":
+        return _cmd_fix(cl, args, github=github)
     if args.command == "show":
         r = cl.get_version(args.release_version)
         if not r:
@@ -303,6 +352,97 @@ def _cmd_validate(cl, args, strict: bool, github: bool) -> int:
             f"{len(errors)} error(s), {len(warnings)} warning(s)"
         )
     return EXIT_FAIL if failed else EXIT_OK
+
+
+def _writer_for(path: str, args):
+    """Pick the output renderer (markdown or YAML) for a target path."""
+    from ._write import to_markdown, to_yaml
+
+    if path.lower().endswith((".yml", ".yaml")) or (
+        path == "-" and args.input_format == "yaml"
+    ):
+        return lambda cl: to_yaml(cl)
+    return lambda cl: to_markdown(cl, repo_url=args.repo_url)
+
+
+def _cmd_bump(cl, args) -> int:
+    import datetime
+
+    if args.file == "-":
+        print("Error: 'bump' needs a real file, not stdin.", file=sys.stderr)
+        return EXIT_USAGE
+
+    release_date = None
+    if args.date:
+        try:
+            release_date = datetime.date.fromisoformat(args.date)
+        except ValueError:
+            print(f"Error: invalid --date {args.date!r} (expected YYYY-MM-DD).",
+                  file=sys.stderr)
+            return EXIT_USAGE
+
+    try:
+        release = cl.bump(args.new_version, release_date=release_date)
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return EXIT_FAIL
+
+    text = _writer_for(args.file, args)(cl)
+    with open(args.file, "w", encoding="utf-8") as fh:
+        fh.write(text)
+    if not args.quiet:
+        print(
+            f"Released {release.version} ({release.release_date}) with "
+            f"{len(release.entries)} entr{'y' if len(release.entries) == 1 else 'ies'} "
+            f"-> {args.file}"
+        )
+    return EXIT_OK
+
+
+def _cmd_convert(cl, args) -> int:
+    out = args.output_path
+    if not out.lower().endswith((".md", ".markdown", ".yml", ".yaml")) and out != "-":
+        print(
+            f"Error: can't infer output format from {out!r} "
+            "(use a .md, .markdown, .yml, or .yaml extension).",
+            file=sys.stderr,
+        )
+        return EXIT_USAGE
+    text = _writer_for(out, args)(cl)
+    if out == "-":
+        sys.stdout.write(text)
+        return EXIT_OK
+    with open(out, "w", encoding="utf-8") as fh:
+        fh.write(text)
+    if not args.quiet:
+        print(f"Wrote {out} ({len(cl.releases)} releases).")
+    return EXIT_OK
+
+
+def _cmd_fix(cl, args, github: bool) -> int:
+    issues = cl.validate()
+    fixable = [i for i in issues if i.line is not None]
+    remaining = [i for i in issues if i.line is None]
+
+    text = _writer_for(args.file, args)(cl)
+    if args.file == "-":
+        sys.stdout.write(text)
+    else:
+        with open(args.file, "w", encoding="utf-8") as fh:
+            fh.write(text)
+
+    if not args.quiet:
+        for i in fixable:
+            print(f"  fixed: {i}", file=sys.stderr)
+        for i in remaining:
+            print(f"  not auto-fixable: {i}", file=sys.stderr)
+        target = "stdout" if args.file == "-" else args.file
+        print(
+            f"{target}: normalized ({len(fixable)} issue(s) fixed, "
+            f"{len(remaining)} remaining)",
+            file=sys.stderr,
+        )
+    return EXIT_OK
 
 
 # ── Output helpers ────────────────────────────────────────────────────────────

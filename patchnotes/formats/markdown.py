@@ -42,6 +42,7 @@ UNRELEASED_HEADER = re.compile(r'^##\s+\[?Unreleased\]?\s*$', re.IGNORECASE)
 CHANGE_TYPE_HEADER = re.compile(r'^###\s+(.+)', re.IGNORECASE)
 BULLET = re.compile(r'^\s*[-*+]\s+(.+)')
 CONTINUATION = re.compile(r'^\s{2,}(\S.*)$')
+LINK_DEF = re.compile(r'^\[([^\]]+)\]:\s*(\S+)\s*$')
 YANKED = re.compile(r'\[YANKED\]', re.IGNORECASE)
 
 _TYPE_MAP = {t.value.lower(): t for t in ChangeType}
@@ -126,6 +127,11 @@ class MarkdownFormat(FormatParser):
         for lineno, line in enumerate(lines, start=1):
             if line.startswith('# ') and in_header:
                 changelog.title = line[2:].strip()
+                continue
+            m = LINK_DEF.match(line)
+            if m:
+                # Keep a Changelog compare-link footnote: [1.2.0]: https://...
+                changelog.links[m.group(1)] = m.group(2)
                 continue
             if in_header and not line.startswith('## '):
                 bullet = BULLET.match(line)
