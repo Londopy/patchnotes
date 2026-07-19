@@ -30,18 +30,22 @@ EXIT_OK = 0
 EXIT_FAIL = 1
 EXIT_USAGE = 2
 
-#: command name -> number of required positional parameters
+#: command name -> (min, max) positional parameters
 COMMANDS = {
-    "latest": 0,
-    "unreleased": 0,
-    "show": 1,
-    "diff": 2,
-    "breaking": 0,
-    "json": 0,
-    "validate": 0,
-    "bump": 1,
-    "convert": 1,
-    "fix": 0,
+    "latest": (0, 0),
+    "unreleased": (0, 0),
+    "show": (1, 1),
+    "diff": (2, 2),
+    "breaking": (0, 0),
+    "json": (0, 0),
+    "validate": (0, 0),
+    "bump": (1, 1),
+    "convert": (1, 1),
+    "fix": (0, 0),
+    "check-version": (0, 0),
+    "fragment": (1, 3),
+    "dep": (3, 3),
+    "badge": (0, 0),
 }
 
 #: commands that accept an optional trailing file argument
@@ -52,12 +56,13 @@ _TRAILING_FILE_OK = ("validate", "fix")
 
 def _bind_params(parser, args) -> None:
     """Validate parameter counts and bind them to named attributes."""
-    expected = COMMANDS.get(args.command, 0)
+    lo, hi = COMMANDS.get(args.command, (0, 0))
     got = len(args.params)
-    if args.command in _TRAILING_FILE_OK and got == expected + 1:
+    if args.command in _TRAILING_FILE_OK and got == hi + 1:
         args.file = args.params.pop()
         got -= 1
-    if got != expected:
+    if not (lo <= got <= hi):
+        expected = str(lo) if lo == hi else f"{lo}-{hi}"
         parser.error(
             f"command {args.command or '(summary)'!s} takes {expected} "
             f"argument(s), got {got}"
@@ -90,7 +95,7 @@ def main(argv=None) -> int:
     )
     parser.add_argument(
         "-f", "--format",
-        choices=("text", "json"),
+        choices=("text", "json", "sarif"),
         default="text",
         help="Output format (default: text)",
     )
@@ -128,6 +133,31 @@ def main(argv=None) -> int:
         "--date",
         metavar="YYYY-MM-DD",
         help="With 'bump': release date (default: today)",
+    )
+    parser.add_argument(
+        "--against",
+        metavar="FILE_OR_VERSION",
+        help="With 'check-version': metadata file (pyproject.toml, "
+        "package.json, Cargo.toml) or literal version to compare the "
+        "latest changelog version against (default: auto-discover)",
+    )
+    parser.add_argument(
+        "--collect",
+        action="store_true",
+        help="With 'bump'/'unreleased': fold changelog.d/ fragments into "
+        "[Unreleased] first",
+    )
+    parser.add_argument(
+        "--fragments-dir",
+        metavar="DIR",
+        help="Fragments directory (default: changelog.d/ next to the "
+        "changelog)",
+    )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        dest="show_all",
+        help="With 'dep': show every change, not just breaking/security",
     )
     parser.add_argument(
         "--repo-url",
@@ -170,6 +200,14 @@ def main(argv=None) -> int:
     _bind_params(parser, args)
     strict = args.strict
     github = args.github or os.environ.get("GITHUB_ACTIONS") == "true"
+
+    if args.format == "sarif" and args.command != "validate":
+        parser.error("--format sarif is only supported with 'validate'")
+
+    if args.command == "dep":
+        return _cmd_dep(args)
+    if args.command == "fragment":
+        return _cmd_fragment(args)
 
     # ── Load ──────────────────────────────────────────────────────────────
     filename = None if args.file == "-" else args.file
@@ -219,6 +257,9 @@ def main(argv=None) -> int:
     if args.command == "latest":
         return _cmd_single(cl.latest(), "No releases found.", args)
     if args.command == "unreleased":
+        if args.collect:
+            from ._fragments import collect, fragments_dir
+            collect(cl, fragments_dir(args.file, args.fragments_dir))
         u = cl.unreleased()
         if args.fail_if_empty and (u is None or not u.entries):
             print(
@@ -230,6 +271,10 @@ def main(argv=None) -> int:
         return _cmd_single(u, "No unreleased changes.", args)
     if args.command == "bump":
         return _cmd_bump(cl, args)
+    if args.command == "check-version":
+        return _cmd_check_version(cl, args)
+    if args.command == "badge":
+        return _cmd_badge(cl, args)
     if args.command == "convert":
         return _cmd_convert(cl, args)
     if args.command == "fix":
@@ -327,6 +372,12 @@ def _cmd_validate(cl, args, strict: bool, github: bool) -> int:
     warnings = [i for i in issues if i.severity is Severity.WARNING]
     failed = bool(errors) or (strict and bool(issues))
 
+    if args.format == "sarif":
+        from . import __version__
+        from ._sarif import to_sarif
+        print(json.dumps(to_sarif(issues, args.file, __version__), indent=2))
+        return EXIT_FAIL if failed else EXIT_OK
+
     if args.format == "json":
         print(json.dumps(
             {
@@ -381,6 +432,11 @@ def _cmd_bump(cl, args) -> int:
                   file=sys.stderr)
             return EXIT_USAGE
 
+    collected_files: list = []
+    if args.collect:
+        from ._fragments import collect, fragments_dir
+        collected_files = collect(cl, fragments_dir(args.file, args.fragments_dir))
+
     try:
         release = cl.bump(args.new_version, release_date=release_date)
     except ValueError as e:
@@ -390,6 +446,10 @@ def _cmd_bump(cl, args) -> int:
     text = _writer_for(args.file, args)(cl)
     with open(args.file, "w", encoding="utf-8") as fh:
         fh.write(text)
+    for frag in collected_files:
+        os.remove(frag)
+    if collected_files and not args.quiet:
+        print(f"Collected and removed {len(collected_files)} fragment(s).")
     if not args.quiet:
         print(
             f"Released {release.version} ({release.release_date}) with "
@@ -442,6 +502,139 @@ def _cmd_fix(cl, args, github: bool) -> int:
             f"{len(remaining)} remaining)",
             file=sys.stderr,
         )
+    return EXIT_OK
+
+
+def _cmd_check_version(cl, args) -> int:
+    from ._project_version import discover_target, extract_version, normalize
+
+    latest = cl.latest()
+    if latest is None:
+        print("Error: changelog has no released versions.", file=sys.stderr)
+        return EXIT_FAIL
+
+    target = args.against
+    if not target:
+        base = "." if args.file == "-" else (os.path.dirname(args.file) or ".")
+        target = discover_target(base)
+        if not target:
+            print(
+                "Error: no metadata file found (tried pyproject.toml, "
+                "package.json, Cargo.toml). Use --against.",
+                file=sys.stderr,
+            )
+            return EXIT_USAGE
+    try:
+        other, source = extract_version(target)
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return EXIT_USAGE
+
+    cl_v, other_v = normalize(latest.version), normalize(other)
+    if cl_v != other_v:
+        print(
+            f"Version mismatch: changelog says {cl_v} "
+            f"({args.file}), {source} says {other_v}.",
+            file=sys.stderr,
+        )
+        return EXIT_FAIL
+    if not args.quiet:
+        print(f"Version match: {cl_v} ({args.file} == {source})")
+    return EXIT_OK
+
+
+def _cmd_fragment(args) -> int:
+    from ._fragments import add_fragment, fragments_dir, list_fragments
+
+    directory = fragments_dir(args.file, args.fragments_dir)
+    action = args.params[0]
+
+    if action == "add":
+        if len(args.params) != 3:
+            print("Usage: patchnotes fragment add TYPE \"TEXT\"", file=sys.stderr)
+            return EXIT_USAGE
+        try:
+            path = add_fragment(directory, args.params[1], args.params[2])
+        except ValueError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return EXIT_USAGE
+        if not args.quiet:
+            print(f"Created {path}")
+        return EXIT_OK
+
+    if action == "list":
+        if len(args.params) != 1:
+            print("Usage: patchnotes fragment list", file=sys.stderr)
+            return EXIT_USAGE
+        pending = list_fragments(directory)
+        if args.format == "json":
+            print(json.dumps(
+                [
+                    {"path": p, "change_type": ct.value, "entries": texts}
+                    for p, ct, texts in pending
+                ],
+                indent=2,
+            ))
+            return EXIT_OK
+        if not pending:
+            if not args.quiet:
+                print(f"No pending fragments in {directory}.")
+            return EXIT_OK
+        for p, ct, texts in pending:
+            for text in texts:
+                print(f"  [{ct.value}] {text}  ({os.path.basename(p)})")
+        return EXIT_OK
+
+    print(f"Error: unknown fragment action {action!r} (use add or list).",
+          file=sys.stderr)
+    return EXIT_USAGE
+
+
+def _cmd_dep(args) -> int:
+    from ._depdiff import fetch_dep_changelog, find_github_repo, render_dep_diff
+
+    package, from_v, to_v = args.params
+    try:
+        owner, repo = find_github_repo(package)
+        cl = fetch_dep_changelog(owner, repo)
+        text, flagged = render_dep_diff(
+            cl, package, from_v, to_v, show_all=args.show_all
+        )
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return EXIT_FAIL
+    except OSError as e:
+        print(f"Error: network problem while resolving {package!r}: {e}",
+              file=sys.stderr)
+        return EXIT_FAIL
+    if args.format == "json":
+        releases = cl.diff(from_v, to_v)
+        print(json.dumps(
+            {
+                "package": package,
+                "repository": f"https://github.com/{owner}/{repo}",
+                "from": from_v,
+                "to": to_v,
+                "flagged": flagged,
+                "releases": [r.to_dict() for r in releases],
+            },
+            indent=2, default=str,
+        ))
+    else:
+        print(text)
+    return EXIT_OK
+
+
+def _cmd_badge(cl, args) -> int:
+    latest = cl.latest()
+    print(json.dumps(
+        {
+            "schemaVersion": 1,
+            "label": "changelog",
+            "message": f"v{latest.version}" if latest else "none",
+            "color": "orange" if latest else "lightgrey",
+        }
+    ))
     return EXIT_OK
 
 

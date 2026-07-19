@@ -220,6 +220,53 @@ It keeps an empty `[Unreleased]` section on top, refuses to release an
 empty section or a duplicate version, and updates compare-link footnotes
 if the changelog uses them.
 
+### Changelog fragments (no more merge conflicts)
+
+The main reason busy repos abandon `CHANGELOG.md`: every PR edits the same
+`[Unreleased]` lines and conflicts with every other PR. Fragments fix that
+with zero configuration — each PR adds its own file:
+
+```bash
+# In your PR (no shared lines touched):
+patchnotes fragment add fixed "Handle empty input without crashing"
+# -> changelog.d/fixed-3fa9c2d1.md
+
+patchnotes fragment list        # see everything pending
+
+# On release day — fold fragments in, delete them, cut the release:
+patchnotes CHANGELOG.md bump 2.2.0 --collect
+```
+
+In PR CI, count pending fragments as unreleased changes:
+
+```bash
+patchnotes CHANGELOG.md unreleased --fail-if-empty --collect
+```
+
+The change type is the filename prefix, the text is the file content.
+No config file. (If you need towncrier's templating, use towncrier —
+this is the 90% case with 0% setup.)
+
+### Reviewing dependency bumps
+
+Dependabot says `requests 2.30.0 -> 2.32.0`. What actually changed?
+
+```console
+$ patchnotes dep requests 2.30.0 2.32.0
+requests: 2.30.0 -> 2.32.0 (3 release(s) in between)
+
+  v2.32.0  2024-05-20
+    ! [Security] Fixed a security issue in cert verification
+  ...
+
+  1 breaking/security-relevant change(s) flagged (!). Review before merging.
+```
+
+Resolves the package's GitHub repo via PyPI metadata, fetches its
+changelog, and flags breaking/removed/security/deprecated entries in the
+version range. `--all` shows everything; `--format json` for scripting.
+Best-effort: needs the dependency to keep a parseable changelog.
+
 ---
 
 ## Rendering
@@ -291,6 +338,13 @@ patchnotes CHANGELOG.md convert changelog.yml
 
 # Rewrite an off-spec changelog in normalized form
 patchnotes CHANGELOG.md fix
+
+# Fail if changelog and package versions disagree
+patchnotes CHANGELOG.md check-version                      # auto-finds pyproject.toml etc.
+patchnotes CHANGELOG.md check-version --against "$GITHUB_REF_NAME"
+
+# What breaks if I merge this Dependabot bump?
+patchnotes dep requests 2.30.0 2.32.0
 ```
 
 ### Shell scripting
@@ -322,7 +376,17 @@ patchnotes CHANGELOG.md validate --strict   # fail on warnings too
 
 # Require a changelog entry in every PR
 patchnotes CHANGELOG.md unreleased --fail-if-empty
+
+# Catch "changelog says 2.1.0, pyproject says 2.0.4" before it ships
+patchnotes CHANGELOG.md check-version
 ```
+
+For GitHub code scanning, `validate --format sarif` emits SARIF 2.1.0 —
+upload it with `github/codeql-action/upload-sarif` and changelog problems
+appear in the Security tab and as PR annotations.
+
+`patchnotes CHANGELOG.md badge` prints a [shields.io endpoint](https://shields.io/badges/endpoint-badge)
+JSON — publish it (e.g. to gh-pages) for a live "latest changelog version" badge.
 
 Inside GitHub Actions, `validate` automatically emits `::error`/`::warning` annotations with file and line, so problems show up inline on the PR diff. (Force this locally with `--github`.)
 
@@ -379,6 +443,20 @@ jobs:
         with:
           file: CHANGELOG.md
           strict: "true"
+          check-version: pyproject.toml   # optional: version sync check
+```
+
+Full release-day flow in one step — on tag push, validate, check the tag
+matches the changelog, and publish a GitHub Release with the latest
+section as notes:
+
+```yaml
+      - uses: Londopy/patchnotes@v2
+        with:
+          file: CHANGELOG.md
+          strict: "true"
+          check-version: ${{ github.ref_name }}
+          release: "true"
 ```
 
 Or plain shell (works on any CI):

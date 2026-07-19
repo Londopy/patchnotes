@@ -2,6 +2,17 @@
 
 Parse, query, and validate changelogs in Python and CI.
 
+## [2.2.0] - 2026-07-19
+
+### Added
+
+- `check-version` command: fails CI when the latest changelog version doesn't match `pyproject.toml`, `package.json`, `Cargo.toml`, or a literal version/tag (`--against "$GITHUB_REF_NAME"`). Auto-discovers the metadata file next to the changelog.
+- Changelog fragments: `patchnotes fragment add fixed "..."` writes a snippet to `changelog.d/`, ending [Unreleased] merge conflicts. `fragment list` shows pending entries; `bump --collect` folds them into the release and deletes the files; `unreleased --fail-if-empty --collect` counts fragments as unreleased changes.
+- `dep` command: `patchnotes dep requests 2.30.0 2.32.0` resolves a PyPI package to its GitHub repo, fetches its changelog, and flags every breaking/removed/security/deprecated change between two versions — built for reviewing Dependabot bumps.
+- SARIF output: `validate --format sarif` emits SARIF 2.1.0 for GitHub code scanning upload.
+- `badge` command prints a shields.io endpoint JSON for a "latest changelog version" badge.
+- GitHub Action: new `check-version` input runs the version sync check, and `release: "true"` creates a GitHub Release with the latest changelog section as notes.
+
 ## [2.1.0] - 2026-07-13
 
 ### Added

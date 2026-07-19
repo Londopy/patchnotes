@@ -43,6 +43,12 @@ CHANGE_TYPE_HEADER = re.compile(r'^###\s+(.+)', re.IGNORECASE)
 BULLET = re.compile(r'^\s*[-*+]\s+(.+)')
 CONTINUATION = re.compile(r'^\s{2,}(\S.*)$')
 LINK_DEF = re.compile(r'^\[([^\]]+)\]:\s*(\S+)\s*$')
+# RST/setext style: "2.32.3 (2024-05-29)" underlined with ---- or ====
+SETEXT_UNDERLINE = re.compile(r'^[-=~^]{3,}\s*$')
+SETEXT_VERSION = re.compile(
+    r'^\s*v?(?P<version>\d+(?:\.\d+){0,3}[\w.-]*)\s*'
+    r'(?:\((?P<date>[^)]+)\))?\s*$'
+)
 YANKED = re.compile(r'\[YANKED\]', re.IGNORECASE)
 
 _TYPE_MAP = {t.value.lower(): t for t in ChangeType}
@@ -118,7 +124,7 @@ class MarkdownFormat(FormatParser):
     def parse(self, text: str) -> Changelog:
         changelog = Changelog()
         issues = changelog.issues
-        lines = text.splitlines()
+        lines = self._normalize_setext(text.splitlines(), issues)
 
         current_release: Optional[Release] = None
         current_type: ChangeType = ChangeType.CHANGED
@@ -231,6 +237,31 @@ class MarkdownFormat(FormatParser):
 
         changelog.description = changelog.description.strip()
         return changelog
+
+    @staticmethod
+    def _normalize_setext(
+        lines: list, issues: list
+    ) -> list:
+        """Rewrite RST/setext version headers ("2.3.0" over ----) into
+        '## [2.3.0] - date' so changelogs like requests' HISTORY.md parse."""
+        out = list(lines)
+        for i in range(len(out) - 1):
+            if not SETEXT_UNDERLINE.match(out[i + 1]):
+                continue
+            m = SETEXT_VERSION.match(out[i])
+            if not m:
+                continue
+            ver = m.group('version').rstrip('.')
+            raw_date = (m.group('date') or '').strip()
+            out[i] = f"## [{ver}]" + (f" - {raw_date}" if raw_date else "")
+            out[i + 1] = ""
+            issues.append(ValidationIssue(
+                _v.MALFORMED_HEADER,
+                f"RST-style release header for {ver!r} interpreted as "
+                f"'{out[i]}'",
+                Severity.WARNING, i + 1,
+            ))
+        return out
 
     def _try_release_header(
         self, line: str, lineno: int, issues: list[ValidationIssue]

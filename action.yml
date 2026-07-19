@@ -1,16 +1,26 @@
-# Composite GitHub Action for validating changelogs with patchnotes.
+# Composite GitHub Action for changelog validation and release automation.
 #
-# Usage in a workflow:
+# Validate on PRs:
 #
 #   - uses: Londopy/patchnotes@v2
 #     with:
 #       file: CHANGELOG.md
 #       strict: "true"
+#       check-version: pyproject.toml
+#
+# Full release-day flow on tag push (validate -> version sync -> GitHub Release):
+#
+#   - uses: Londopy/patchnotes@v2
+#     with:
+#       strict: "true"
+#       check-version: ${{ github.ref_name }}
+#       release: "true"
 #
 name: "patchnotes changelog validator"
 description: >-
-  Validate a Keep a Changelog / YAML changelog. Fails the job on spec
-  violations and annotates the offending lines in the PR.
+  Validate a Keep a Changelog / YAML changelog, check it matches your
+  package version, and optionally publish a GitHub Release with the
+  latest section as notes. Annotates offending lines in PRs.
 author: "Londopy"
 branding:
   icon: "file-text"
@@ -25,10 +35,25 @@ inputs:
     description: "Treat warnings as failures ('true' or 'false')."
     required: false
     default: "false"
+  check-version:
+    description: >-
+      Optional version sync check: a metadata file (pyproject.toml,
+      package.json, Cargo.toml), a literal version, or a tag like
+      ${{ github.ref_name }}. Fails if it doesn't match the latest
+      changelog version. Empty = skip.
+    required: false
+    default: ""
+  release:
+    description: >-
+      'true' = create a GitHub Release for the current tag using the
+      latest changelog section as the release notes. Requires running on
+      a tag push and `permissions: contents: write`.
+    required: false
+    default: "false"
   version:
     description: "patchnotes version spec to install (pip requirement specifier)."
     required: false
-    default: "patchnotes>=2.0.1"
+    default: "patchnotes>=2.2.0"
 
 outputs:
   latest-version:
@@ -51,6 +76,11 @@ runs:
         fi
         patchnotes "${{ inputs.file }}" validate $ARGS
 
+    - name: Check version sync
+      if: inputs.check-version != ''
+      shell: bash
+      run: patchnotes "${{ inputs.file }}" check-version --against "${{ inputs.check-version }}"
+
     - name: Export latest version
       id: query
       shell: bash
@@ -58,3 +88,14 @@ runs:
         LATEST=$(patchnotes "${{ inputs.file }}" --format json latest \
           | python -c "import json,sys; d=json.load(sys.stdin); print(d['version'] if d else '')")
         echo "latest-version=$LATEST" >> "$GITHUB_OUTPUT"
+
+    - name: Create GitHub Release
+      if: inputs.release == 'true'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        patchnotes "${{ inputs.file }}" latest > release-notes.txt
+        gh release create "$GITHUB_REF_NAME" \
+          --title "$GITHUB_REF_NAME" \
+          --notes-file release-notes.txt
