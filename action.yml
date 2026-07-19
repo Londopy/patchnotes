@@ -38,9 +38,9 @@ inputs:
   check-version:
     description: >-
       Optional version sync check: a metadata file (pyproject.toml,
-      package.json, Cargo.toml), a literal version, or a tag like
-      ${{ github.ref_name }}. Fails if it doesn't match the latest
-      changelog version. Empty = skip.
+      package.json, Cargo.toml), a literal version, or a tag such as
+      the workflow's github.ref_name. Fails if it doesn't match the
+      latest changelog version. Empty = skip.
     required: false
     default: ""
   release:
