@@ -1,6 +1,7 @@
 # patchnotes
 
 [![PyPI](https://img.shields.io/pypi/v/patchnotes)](https://pypi.org/project/patchnotes/)
+[![GitHub Marketplace](https://img.shields.io/badge/marketplace-patchnotes-blue?logo=github)](https://github.com/marketplace/actions/patchnotes-changelog-validator)
 [![Python versions](https://img.shields.io/pypi/pyversions/patchnotes)](https://pypi.org/project/patchnotes/)
 [![CI](https://github.com/Londopy/patchnotes/actions/workflows/ci.yml/badge.svg)](https://github.com/Londopy/patchnotes/actions/workflows/ci.yml)
 [![Publish to PyPI](https://github.com/Londopy/patchnotes/actions/workflows/publish.yml/badge.svg)](https://github.com/Londopy/patchnotes/actions/workflows/publish.yml)
