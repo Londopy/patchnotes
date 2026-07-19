@@ -5,7 +5,7 @@ name: Publish to PyPI
 
 on:
   push:
-    tags: ["v[0-9]*"]   # version tags only — ignores the moving 'v2' action tag
+    tags: ["v*.*.*"]   # full version tags only — the moving 'v2' action tag doesn't match
   workflow_dispatch:
 
 jobs:
