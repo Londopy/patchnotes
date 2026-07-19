@@ -18,9 +18,8 @@
 #
 name: "patchnotes changelog validator"
 description: >-
-  Validate a Keep a Changelog / YAML changelog, check it matches your
-  package version, and optionally publish a GitHub Release with the
-  latest section as notes. Annotates offending lines in PRs.
+  Validate Keep a Changelog / YAML changelogs, check version sync, and
+  publish GitHub Releases with changelog notes.
 author: "Londopy"
 branding:
   icon: "file-text"
