@@ -2,6 +2,16 @@
 
 Parse, query, and validate changelogs in Python and CI.
 
+## [2.3.0] - 2026-07-19
+
+### Added
+
+- CI workflow (`.github/workflows/ci.yml`) that dogfoods patchnotes: the repo's own changelog is strict-validated by the bundled action (`uses: ./` installed from source), version-synced against `pyproject.toml`, and uploaded as SARIF to GitHub code scanning on every push.
+
+### Changed
+
+- The publish workflow now uses the bundled action for validation, tag/changelog version sync, and GitHub Release creation with changelog notes — every release exercises the full feature set.
+
 ## [2.2.0] - 2026-07-19
 
 ### Added

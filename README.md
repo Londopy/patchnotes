@@ -2,6 +2,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/patchnotes)](https://pypi.org/project/patchnotes/)
 [![Python versions](https://img.shields.io/pypi/pyversions/patchnotes)](https://pypi.org/project/patchnotes/)
+[![CI](https://github.com/Londopy/patchnotes/actions/workflows/ci.yml/badge.svg)](https://github.com/Londopy/patchnotes/actions/workflows/ci.yml)
 [![Publish to PyPI](https://github.com/Londopy/patchnotes/actions/workflows/publish.yml/badge.svg)](https://github.com/Londopy/patchnotes/actions/workflows/publish.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Keep a Changelog](https://img.shields.io/badge/changelog-keep--a--changelog-orange)](https://keepachangelog.com)
@@ -476,6 +477,8 @@ The action also exposes the latest version as an output:
 ```
 
 See [`examples/workflows/`](examples/workflows/) for complete workflows, including publishing GitHub Releases from changelog notes.
+
+This repository dogfoods all of it: [`ci.yml`](.github/workflows/ci.yml) validates patchnotes' own changelog with the bundled action on every PR (plus SARIF upload to code scanning), and [`publish.yml`](.github/workflows/publish.yml) uses the action to gate and publish every release.
 
 ---
 

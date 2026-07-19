@@ -1,6 +1,6 @@
-# Publishes to PyPI via trusted publishing (no API tokens needed).
-# Fires on version tags (v2.0.0, v2.1.0, ...) and can be run manually
-# from the Actions tab for an existing tag.
+# Release pipeline — dogfoods the bundled patchnotes action for validation,
+# tag/changelog sync, and GitHub Release creation, then publishes to PyPI
+# via trusted publishing.
 name: Publish to PyPI
 
 on:
@@ -18,11 +18,31 @@ jobs:
           python-version: "3.12"
       - run: pip install . pytest
       - run: pytest tests/ -q
-      - name: Validate own changelog (strict)
-        run: patchnotes CHANGELOG.md validate --strict
+
+  release:
+    name: Validate + GitHub Release (dogfood)
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # On tag pushes: strict-validate, require tag == latest changelog
+      # version, and publish a GitHub Release with the changelog notes.
+      # On manual runs: validate + check against pyproject.toml only.
+      - uses: ./
+        with:
+          file: CHANGELOG.md
+          strict: "true"
+          check-version: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'pyproject.toml' }}
+          release: ${{ startsWith(github.ref, 'refs/tags/') && 'true' || 'false' }}
+          version: "."
 
   publish:
-    needs: test
+    needs: release
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
