@@ -226,7 +226,9 @@ class Changelog:
                 )
             seen.add(r.version)
 
-            if not r.entries:
+            # An empty [Unreleased] section is normal (e.g. right after a
+            # release); only warn about empty *versioned* releases.
+            if not r.entries and not r.is_unreleased:
                 issues.append(
                     ValidationIssue(
                         _v.EMPTY_RELEASE,

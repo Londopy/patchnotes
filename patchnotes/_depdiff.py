@@ -139,3 +139,42 @@ def render_dep_diff(
     else:
         lines.append("  No breaking or security changes flagged.")
     return "\n".join(lines), flagged
+
+
+# ── Requirements-file diffing ─────────────────────────────────────────────────
+
+_REQ_LINE = re.compile(
+    r'^\s*(?P<name>[A-Za-z0-9]([A-Za-z0-9._-]*[A-Za-z0-9])?)'
+    r'(?:\[[^\]]*\])?\s*==\s*(?P<version>[^\s;#]+)'
+)
+
+
+def parse_requirements(text: str) -> dict:
+    """Extract ``name==version`` pins from a requirements file.
+
+    Unpinned lines (>=, ~=, bare names, -r includes, URLs) are ignored —
+    version diffing only makes sense for exact pins.
+    """
+    pins: dict[str, str] = {}
+    for line in text.splitlines():
+        m = _REQ_LINE.match(line)
+        if m:
+            pins[m.group("name").lower()] = m.group("version")
+    return pins
+
+
+def diff_requirements(old_text: str, new_text: str) -> tuple:
+    """Compare two requirements files.
+
+    Returns (changed, added, removed) where changed is a list of
+    (name, old_version, new_version).
+    """
+    old, new = parse_requirements(old_text), parse_requirements(new_text)
+    changed = [
+        (name, old[name], new[name])
+        for name in sorted(old.keys() & new.keys())
+        if old[name] != new[name]
+    ]
+    added = sorted(new.keys() - old.keys())
+    removed = sorted(old.keys() - new.keys())
+    return changed, added, removed

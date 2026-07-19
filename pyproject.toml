@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "patchnotes"
-version = "2.3.0"
+version = "2.4.0"
 description = "Parse, query, and validate changelogs (Keep a Changelog markdown, YAML) in Python and CI"
 readme = "README.md"
 license = { text = "MIT" }
@@ -24,6 +24,12 @@ classifiers = [
     "Topic :: Text Processing :: Markup :: Markdown",
     "Typing :: Typed",
 ]
+
+[project.optional-dependencies]
+mkdocs = ["mkdocs>=1.4"]
+
+[project.entry-points."mkdocs.plugins"]
+patchnotes = "patchnotes.mkdocs_plugin:PatchnotesPlugin"
 
 [project.scripts]
 patchnotes = "patchnotes._cli:main"

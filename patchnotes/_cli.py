@@ -44,8 +44,9 @@ COMMANDS = {
     "fix": (0, 0),
     "check-version": (0, 0),
     "fragment": (1, 3),
-    "dep": (3, 3),
+    "dep": (1, 3),
     "badge": (0, 0),
+    "init": (0, 0),
 }
 
 #: commands that accept an optional trailing file argument
@@ -154,6 +155,17 @@ def main(argv=None) -> int:
         "changelog)",
     )
     parser.add_argument(
+        "--requirements",
+        action="store_true",
+        help="With 'dep': compare two requirements files instead of one "
+        "package (dep --requirements old.txt new.txt)",
+    )
+    parser.add_argument(
+        "--workflow",
+        action="store_true",
+        help="With 'init': also scaffold .github/workflows/changelog.yml",
+    )
+    parser.add_argument(
         "--all",
         action="store_true",
         dest="show_all",
@@ -204,6 +216,8 @@ def main(argv=None) -> int:
     if args.format == "sarif" and args.command != "validate":
         parser.error("--format sarif is only supported with 'validate'")
 
+    if args.command == "init":
+        return _cmd_init(args)
     if args.command == "dep":
         return _cmd_dep(args)
     if args.command == "fragment":
@@ -590,7 +604,40 @@ def _cmd_fragment(args) -> int:
     return EXIT_USAGE
 
 
+def _cmd_init(args) -> int:
+    from ._scaffold import write_changelog, write_workflow
+
+    try:
+        write_changelog(args.file, repo_url=args.repo_url)
+    except FileExistsError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return EXIT_FAIL
+    created = [args.file]
+    if args.workflow:
+        try:
+            created.append(write_workflow(args.file))
+        except FileExistsError as e:
+            print(f"Warning: {e}", file=sys.stderr)
+    if not args.quiet:
+        for path in created:
+            print(f"Created {path}")
+        print("Next: add entries under [Unreleased], then "
+              f"`patchnotes {args.file} bump X.Y.Z` on release day.")
+    return EXIT_OK
+
+
 def _cmd_dep(args) -> int:
+    if args.requirements:
+        if len(args.params) != 2:
+            print("Usage: patchnotes dep --requirements OLD.txt NEW.txt",
+                  file=sys.stderr)
+            return EXIT_USAGE
+        return _cmd_dep_requirements(args)
+    if len(args.params) != 3:
+        print("Usage: patchnotes dep PACKAGE FROM_VERSION TO_VERSION",
+              file=sys.stderr)
+        return EXIT_USAGE
+
     from ._depdiff import fetch_dep_changelog, find_github_repo, render_dep_diff
 
     package, from_v, to_v = args.params
@@ -622,6 +669,80 @@ def _cmd_dep(args) -> int:
         ))
     else:
         print(text)
+    if args.strict and flagged:
+        return EXIT_FAIL
+    return EXIT_OK
+
+
+def _cmd_dep_requirements(args) -> int:
+    from ._depdiff import (
+        diff_requirements,
+        fetch_dep_changelog,
+        find_github_repo,
+        render_dep_diff,
+    )
+
+    old_path, new_path = args.params
+    try:
+        with open(old_path, "r", encoding="utf-8") as fh:
+            old_text = fh.read()
+        with open(new_path, "r", encoding="utf-8") as fh:
+            new_text = fh.read()
+    except OSError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return EXIT_USAGE
+
+    changed, added, removed = diff_requirements(old_text, new_text)
+    total_flagged = 0
+    results = []
+
+    for name, old_v, new_v in changed:
+        try:
+            owner, repo = find_github_repo(name)
+            cl = fetch_dep_changelog(owner, repo)
+            text, flagged = render_dep_diff(
+                cl, name, old_v, new_v, show_all=args.show_all
+            )
+            results.append({"package": name, "from": old_v, "to": new_v,
+                            "flagged": flagged, "text": text, "error": None})
+            total_flagged += flagged
+        except (ValueError, OSError) as e:
+            results.append({"package": name, "from": old_v, "to": new_v,
+                            "flagged": 0, "text": None, "error": str(e)})
+
+    if args.format == "json":
+        print(json.dumps(
+            {
+                "changed": [
+                    {k: v for k, v in r.items() if k != "text"}
+                    for r in results
+                ],
+                "added": added,
+                "removed": removed,
+                "flagged": total_flagged,
+            },
+            indent=2,
+        ))
+        return EXIT_FAIL if (args.strict and total_flagged) else EXIT_OK
+
+    if not changed and not added and not removed:
+        print("No pinned dependency changes found.")
+        return EXIT_OK
+    for r in results:
+        print()
+        if r["error"]:
+            print(f"{r['package']}: {r['from']} -> {r['to']}")
+            print(f"  (couldn't analyze: {r['error']})")
+        else:
+            print(r["text"])
+    if added:
+        print(f"\nNew dependencies: {', '.join(added)}")
+    if removed:
+        print(f"Removed dependencies: {', '.join(removed)}")
+    print(f"\nTotal: {len(changed)} version change(s), "
+          f"{total_flagged} breaking/security change(s) flagged.")
+    if args.strict and total_flagged:
+        return EXIT_FAIL
     return EXIT_OK
 
 

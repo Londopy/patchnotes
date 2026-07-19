@@ -2,6 +2,18 @@
 
 Parse, query, and validate changelogs in Python and CI.
 
+## [2.4.0] - 2026-07-19
+
+### Added
+
+- `patchnotes init` scaffolds a spec-compliant starter CHANGELOG.md (strict-validation clean out of the box); `--workflow` also writes a ready-made `.github/workflows/changelog.yml` PR check.
+- `dep --requirements old.txt new.txt` diffs two requirements files and runs the breaking/security analysis for every changed pin at once — built for reviewing lockfile bump PRs. With `--strict`, flagged changes fail CI.
+- mkdocs plugin: add `patchnotes` to `plugins:` in mkdocs.yml and a `<!-- patchnotes -->` marker in any docs page renders the styled changelog at build time (`pip install patchnotes[mkdocs]`).
+
+### Fixed
+
+- An empty [Unreleased] section no longer triggers a PN203 warning — it's the normal state right after a release (and what `bump` leaves behind). Empty *versioned* releases still warn.
+
 ## [2.3.0] - 2026-07-19
 
 ### Added

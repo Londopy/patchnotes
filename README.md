@@ -34,6 +34,10 @@ pip install patchnotes
 
 Requires Python 3.10+.
 
+Starting a new project? `patchnotes init` creates a spec-compliant starter
+changelog, and `patchnotes init --workflow` adds a ready-made PR validation
+workflow too.
+
 ---
 
 ## Usage
@@ -268,6 +272,14 @@ changelog, and flags breaking/removed/security/deprecated entries in the
 version range. `--all` shows everything; `--format json` for scripting.
 Best-effort: needs the dependency to keep a parseable changelog.
 
+Reviewing a whole lockfile bump? Diff two requirements files at once:
+
+```bash
+patchnotes dep --requirements old-requirements.txt requirements.txt
+# analyzes every changed pin, lists added/removed packages,
+# and with --strict exits 1 if anything breaking/security is flagged
+```
+
 ---
 
 ## Rendering
@@ -479,6 +491,22 @@ The action also exposes the latest version as an output:
 See [`examples/workflows/`](examples/workflows/) for complete workflows, including publishing GitHub Releases from changelog notes.
 
 This repository dogfoods all of it: [`ci.yml`](.github/workflows/ci.yml) validates patchnotes' own changelog with the bundled action on every PR (plus SARIF upload to code scanning), and [`publish.yml`](.github/workflows/publish.yml) uses the action to gate and publish every release.
+
+---
+
+## mkdocs
+
+Render the changelog into your documentation site (`pip install patchnotes[mkdocs]`):
+
+```yaml
+# mkdocs.yml
+plugins:
+  - patchnotes:
+      file: CHANGELOG.md
+```
+
+Then put `<!-- patchnotes -->` in any docs page — it's replaced with the
+parsed, styled changelog at build time.
 
 ---
 
