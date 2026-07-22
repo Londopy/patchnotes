@@ -1,16 +1,10 @@
 # patchnotes
 
-[![PyPI](https://img.shields.io/pypi/v/patchnotes)](https://pypi.org/project/patchnotes/)
-[![GitHub Marketplace](https://img.shields.io/badge/marketplace-patchnotes-blue?logo=github)](https://github.com/marketplace/actions/patchnotes-changelog-validator)
-[![Python versions](https://img.shields.io/pypi/pyversions/patchnotes)](https://pypi.org/project/patchnotes/)
-[![CI](https://github.com/Londopy/patchnotes/actions/workflows/ci.yml/badge.svg)](https://github.com/Londopy/patchnotes/actions/workflows/ci.yml)
-[![Publish to PyPI](https://github.com/Londopy/patchnotes/actions/workflows/publish.yml/badge.svg)](https://github.com/Londopy/patchnotes/actions/workflows/publish.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Keep a Changelog](https://img.shields.io/badge/changelog-keep--a--changelog-orange)](https://keepachangelog.com)
+[![PyPI](https://img.shields.io/pypi/v/patchnotes)](https://pypi.org/project/patchnotes/) [![Python versions](https://img.shields.io/pypi/pyversions/patchnotes)](https://pypi.org/project/patchnotes/) [![Publish to PyPI](https://github.com/Londopy/patchnotes/actions/workflows/publish.yml/badge.svg)](https://github.com/Londopy/patchnotes/actions/workflows/publish.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://github.com/Londopy/patchnotes/blob/main/LICENSE) [![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)](https://github.com/Londopy/patchnotes/blob/main/pyproject.toml) [![Typed](https://img.shields.io/badge/typed-yes-blue)](https://github.com/Londopy/patchnotes) [![Keep a Changelog](https://img.shields.io/badge/changelog-keep--a--changelog-orange)](https://keepachangelog.com)
 
-Parse [Keep a Changelog](https://keepachangelog.com) formatted `CHANGELOG.md` files — and YAML changelogs — into structured Python objects. Query, diff, validate, and render to HTML, RSS, or plain text. Built for use in Python code, shell scripts, and CI/CD.
+**Your `CHANGELOG.md` is the one file in every repo you can't query. patchnotes fixes that.**
 
-**Pure Python. Fully typed. YAML support included.**
+Parse [Keep a Changelog](https://keepachangelog.com) files — and YAML changelogs — into structured Python objects. Query them, diff versions, validate them in CI, and render them to HTML, RSS, or plain text. Pure Python, zero dependencies, fully typed.
 
 ```python
 import patchnotes
@@ -18,7 +12,6 @@ import patchnotes
 cl = patchnotes.parse_file("CHANGELOG.md")
 
 cl.latest()        # Release(v2.1.0, 2024-11-15, 6 entries)
-cl.unreleased()    # Release(vUnreleased, unreleased, 2 entries)
 cl.validate()      # [] — or a list of issues with line numbers
 
 # What broke between 1.4.0 and 2.1.0?
@@ -27,6 +20,36 @@ for r in cl.diff("1.4.0", "2.1.0"):
         print(f"v{r.version}: {entry.text}")
 ```
 
+```bash
+pip install patchnotes
+```
+
+---
+
+## Features
+
+- **Read changelogs as data** — turn any changelog into typed Python objects; diff versions, pull every breaking change, or load one straight from a repo with `from_github("owner", "repo")`.
+- **Never crashes on messy input** — lenient by default: off-spec dates, misspelled headers, and bracket-less versions are recovered and logged with stable codes (`PN1xx`) instead of blowing up.
+- **Gate broken changelogs in CI** — strict mode fails the build and emits inline GitHub PR annotations pinned to the exact file and line.
+- **Render anywhere** — export to HTML, RSS, JSON, plain text, or back to Markdown/YAML.
+- **Zero dependencies, fully typed** — pure Python 3.10+, nothing to install but the package itself.
+
+## How is this different from git-cliff?
+
+They run in opposite directions. **git-cliff generates** a changelog from your git commits — for people who don't want to hand-write one. **patchnotes reads** an existing changelog into structured data, so you can query, validate, or render it. If you want the file written for you, use git-cliff. If you already have the file and want to treat it as data, that's patchnotes. They compose fine in one pipeline.
+
+## Contents
+
+- [Install](#install)
+- [Parse](#parse) · [Validate](#validation-and-strict-mode) · [Formats](#formats)
+- [Access releases](#access-releases) · [Query entries](#query-entries) · [Diff & history](#diff-and-history)
+- [Serialize](#serialize-to-json) · [Write back out](#write-it-back-out) · [Release automation](#release-automation)
+- [Rendering](#rendering) — [HTML](#html) · [RSS](#rss) · [Plain text](#plain-text)
+- [CLI](#cli) · [GitHub Actions](#github-actions) · [pre-commit](#pre-commit)
+- [Data model](#data-model) · [Changelog format](#changelog-format)
+
+---
+
 ## Install
 
 ```bash
@@ -34,10 +57,6 @@ pip install patchnotes
 ```
 
 Requires Python 3.10+.
-
-Starting a new project? `patchnotes init` creates a spec-compliant starter
-changelog, and `patchnotes init --workflow` adds a ready-made PR validation
-workflow too.
 
 ---
 
@@ -226,61 +245,6 @@ It keeps an empty `[Unreleased]` section on top, refuses to release an
 empty section or a duplicate version, and updates compare-link footnotes
 if the changelog uses them.
 
-### Changelog fragments (no more merge conflicts)
-
-The main reason busy repos abandon `CHANGELOG.md`: every PR edits the same
-`[Unreleased]` lines and conflicts with every other PR. Fragments fix that
-with zero configuration — each PR adds its own file:
-
-```bash
-# In your PR (no shared lines touched):
-patchnotes fragment add fixed "Handle empty input without crashing"
-# -> changelog.d/fixed-3fa9c2d1.md
-
-patchnotes fragment list        # see everything pending
-
-# On release day — fold fragments in, delete them, cut the release:
-patchnotes CHANGELOG.md bump 2.2.0 --collect
-```
-
-In PR CI, count pending fragments as unreleased changes:
-
-```bash
-patchnotes CHANGELOG.md unreleased --fail-if-empty --collect
-```
-
-The change type is the filename prefix, the text is the file content.
-No config file. (If you need towncrier's templating, use towncrier —
-this is the 90% case with 0% setup.)
-
-### Reviewing dependency bumps
-
-Dependabot says `requests 2.30.0 -> 2.32.0`. What actually changed?
-
-```console
-$ patchnotes dep requests 2.30.0 2.32.0
-requests: 2.30.0 -> 2.32.0 (3 release(s) in between)
-
-  v2.32.0  2024-05-20
-    ! [Security] Fixed a security issue in cert verification
-  ...
-
-  1 breaking/security-relevant change(s) flagged (!). Review before merging.
-```
-
-Resolves the package's GitHub repo via PyPI metadata, fetches its
-changelog, and flags breaking/removed/security/deprecated entries in the
-version range. `--all` shows everything; `--format json` for scripting.
-Best-effort: needs the dependency to keep a parseable changelog.
-
-Reviewing a whole lockfile bump? Diff two requirements files at once:
-
-```bash
-patchnotes dep --requirements old-requirements.txt requirements.txt
-# analyzes every changed pin, lists added/removed packages,
-# and with --strict exits 1 if anything breaking/security is flagged
-```
-
 ---
 
 ## Rendering
@@ -352,13 +316,6 @@ patchnotes CHANGELOG.md convert changelog.yml
 
 # Rewrite an off-spec changelog in normalized form
 patchnotes CHANGELOG.md fix
-
-# Fail if changelog and package versions disagree
-patchnotes CHANGELOG.md check-version                      # auto-finds pyproject.toml etc.
-patchnotes CHANGELOG.md check-version --against "$GITHUB_REF_NAME"
-
-# What breaks if I merge this Dependabot bump?
-patchnotes dep requests 2.30.0 2.32.0
 ```
 
 ### Shell scripting
@@ -390,17 +347,7 @@ patchnotes CHANGELOG.md validate --strict   # fail on warnings too
 
 # Require a changelog entry in every PR
 patchnotes CHANGELOG.md unreleased --fail-if-empty
-
-# Catch "changelog says 2.1.0, pyproject says 2.0.4" before it ships
-patchnotes CHANGELOG.md check-version
 ```
-
-For GitHub code scanning, `validate --format sarif` emits SARIF 2.1.0 —
-upload it with `github/codeql-action/upload-sarif` and changelog problems
-appear in the Security tab and as PR annotations.
-
-`patchnotes CHANGELOG.md badge` prints a [shields.io endpoint](https://shields.io/badges/endpoint-badge)
-JSON — publish it (e.g. to gh-pages) for a live "latest changelog version" badge.
 
 Inside GitHub Actions, `validate` automatically emits `::error`/`::warning` annotations with file and line, so problems show up inline on the PR diff. (Force this locally with `--github`.)
 
@@ -417,7 +364,7 @@ Say a teammate opens a PR with this edit to `CHANGELOG.md`:
 
 Two problems: the date isn't ISO 8601, and `Improvments` isn't a Keep a Changelog section (it's also misspelled). Locally, `validate` reports both with line numbers:
 
-```console
+```
 $ patchnotes CHANGELOG.md validate --strict
   [ERROR] PN101 line 3: date '2026/08/02' is not ISO 8601 (expected YYYY-MM-DD); interpreted as 2026-08-02
   [WARNING] PN201 line 5: unknown change type 'Improvments'; entries filed under 'Changed'
@@ -457,57 +404,25 @@ jobs:
         with:
           file: CHANGELOG.md
           strict: "true"
-          check-version: pyproject.toml   # optional: version sync check
-```
-
-Full release-day flow in one step — on tag push, validate, check the tag
-matches the changelog, and publish a GitHub Release with the latest
-section as notes:
-
-```yaml
-      - uses: Londopy/patchnotes@v2
-        with:
-          file: CHANGELOG.md
-          strict: "true"
-          check-version: ${{ github.ref_name }}
-          release: "true"
 ```
 
 Or plain shell (works on any CI):
 
 ```yaml
-      - run: |
-          pip install patchnotes
-          patchnotes CHANGELOG.md validate --strict
+- run: |
+    pip install patchnotes
+    patchnotes CHANGELOG.md validate --strict
 ```
 
 The action also exposes the latest version as an output:
 
 ```yaml
-      - uses: Londopy/patchnotes@v2
-        id: changelog
-      - run: echo "Latest release is ${{ steps.changelog.outputs.latest-version }}"
+- uses: Londopy/patchnotes@v2
+  id: changelog
+- run: echo "Latest release is ${{ steps.changelog.outputs.latest-version }}"
 ```
 
-See [`examples/workflows/`](examples/workflows/) for complete workflows, including publishing GitHub Releases from changelog notes.
-
-This repository dogfoods all of it: [`ci.yml`](.github/workflows/ci.yml) validates patchnotes' own changelog with the bundled action on every PR (plus SARIF upload to code scanning), and [`publish.yml`](.github/workflows/publish.yml) uses the action to gate and publish every release.
-
----
-
-## mkdocs
-
-Render the changelog into your documentation site (`pip install patchnotes[mkdocs]`):
-
-```yaml
-# mkdocs.yml
-plugins:
-  - patchnotes:
-      file: CHANGELOG.md
-```
-
-Then put `<!-- patchnotes -->` in any docs page — it's replaced with the
-parsed, styled changelog at build time.
+See [`examples/workflows/`](https://github.com/Londopy/patchnotes/blob/main/examples/workflows) for complete workflows, including publishing GitHub Releases from changelog notes.
 
 ---
 
