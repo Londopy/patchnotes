@@ -18,12 +18,8 @@ import json
 import re
 import urllib.error
 import urllib.request
-from typing import TYPE_CHECKING, Optional
 
 from ._models import Changelog, ChangeType
-
-if TYPE_CHECKING:
-    from ._models import Release
 
 _GITHUB_URL = re.compile(
     r"https?://github\.com/(?P<owner>[\w.-]+)/(?P<repo>[\w.-]+)", re.IGNORECASE
@@ -64,7 +60,7 @@ def find_github_repo(package: str) -> tuple[str, str]:
 
 def fetch_dep_changelog(owner: str, repo: str) -> Changelog:
     """Fetch and parse a dependency's changelog, trying common filenames."""
-    last_error: Optional[Exception] = None
+    last_error: Exception | None = None
     for filename in CHANGELOG_FILENAMES:
         try:
             cl = Changelog.from_github(owner, repo, filename=filename)

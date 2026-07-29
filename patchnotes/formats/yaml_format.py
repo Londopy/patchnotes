@@ -26,7 +26,7 @@ mapping on the release (``added: [...]`` at release level) and a flat
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Any, Optional
+from typing import Any
 
 from .. import _validation as _v
 from .._models import Changelog, ChangeType, Entry, Release
@@ -111,7 +111,7 @@ class YamlFormat(FormatParser):
 
     def _parse_release(
         self, raw: Any, idx: int, issues: list[ValidationIssue]
-    ) -> Optional[Release]:
+    ) -> Release | None:
         where = f"releases[{idx}]"
         if not isinstance(raw, dict):
             issues.append(ValidationIssue(
@@ -196,7 +196,7 @@ class YamlFormat(FormatParser):
     @staticmethod
     def _parse_date(
         raw: Any, where: str, issues: list[ValidationIssue]
-    ) -> Optional[date]:
+    ) -> date | None:
         if raw is None:
             return None
         if isinstance(raw, datetime):

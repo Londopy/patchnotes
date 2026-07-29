@@ -4,13 +4,14 @@ Render a Changelog to HTML, RSS, or plain text.
 """
 
 from __future__ import annotations
+
 import html as _html
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ._parser import Changelog, Release
+    from ._parser import Changelog
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -47,7 +48,7 @@ _TYPE_EMOJI = {
 
 # ── HTML ──────────────────────────────────────────────────────────────────────
 
-def to_html(changelog: "Changelog", full_page: bool = True) -> str:
+def to_html(changelog: Changelog, full_page: bool = True) -> str:
     """
     Render a Changelog to HTML.
 
@@ -178,7 +179,7 @@ body { background: #0d0f14; color: #dde3f0; font-family: system-ui, sans-serif;
 # ── RSS ───────────────────────────────────────────────────────────────────────
 
 def to_rss(
-    changelog: "Changelog",
+    changelog: Changelog,
     feed_url: str = "",
     project_url: str = "",
 ) -> str:
@@ -204,7 +205,7 @@ def to_rss(
     title = _html.escape(changelog.title)
     desc = _html.escape(changelog.description or f"Releases for {changelog.title}")
     link = _html.escape(project_url or feed_url or "")
-    now = datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S +0000")
+    now = datetime.now(UTC).strftime("%a, %d %b %Y %H:%M:%S +0000")
 
     items: list[str] = []
     for release in changelog.releases:
@@ -221,7 +222,7 @@ def to_rss(
                 release.release_date.year,
                 release.release_date.month,
                 release.release_date.day,
-                tzinfo=timezone.utc,
+                tzinfo=UTC,
             )
             pub_date = f"\n    <pubDate>{dt.strftime('%a, %d %b %Y %H:%M:%S +0000')}</pubDate>"
 
@@ -262,7 +263,7 @@ def to_rss(
 # ── Plain text ────────────────────────────────────────────────────────────────
 
 def to_text(
-    changelog: "Changelog",
+    changelog: Changelog,
     max_releases: int = 0,
     width: int = 72,
 ) -> str:

@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import json
 import os
+import pathlib
 import re
-from typing import Optional
 
 _VERSION_LINE = re.compile(
     r'^\s*version\s*=\s*["\']([^"\']+)["\']', re.MULTILINE
@@ -39,8 +39,8 @@ def extract_version(target: str) -> tuple[str, str]:
     Returns (version, source_description). Raises ValueError if no
     version can be found.
     """
-    if os.path.isfile(target):
-        with open(target, "r", encoding="utf-8") as fh:
+    if pathlib.Path(target).is_file():
+        with pathlib.Path(target).open("r", encoding="utf-8") as fh:
             text = fh.read()
         name = os.path.basename(target).lower()
         if name == "package.json":
@@ -70,10 +70,10 @@ def extract_version(target: str) -> tuple[str, str]:
     )
 
 
-def discover_target(base_dir: str) -> Optional[str]:
+def discover_target(base_dir: str) -> str | None:
     """Find a metadata file near the changelog for auto-discovery."""
     for name in DISCOVERY_FILES:
         candidate = os.path.join(base_dir or ".", name)
-        if os.path.isfile(candidate):
+        if pathlib.Path(candidate).is_file():
             return candidate
     return None

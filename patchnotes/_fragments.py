@@ -18,8 +18,9 @@ prefix, the entry text is the file content (one bullet per line).
 from __future__ import annotations
 
 import os
+import pathlib
 import uuid
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from ._models import ChangeType, Entry
 
@@ -30,7 +31,7 @@ DEFAULT_DIR = "changelog.d"
 _TYPE_MAP = {t.value.lower(): t for t in ChangeType}
 
 
-def fragments_dir(changelog_path: str, override: Optional[str] = None) -> str:
+def fragments_dir(changelog_path: str, override: str | None = None) -> str:
     """The fragments directory: ``changelog.d/`` next to the changelog."""
     if override:
         return override
@@ -47,18 +48,18 @@ def add_fragment(directory: str, type_name: str, text: str) -> str:
     text = text.strip()
     if not text:
         raise ValueError("fragment text must not be empty")
-    os.makedirs(directory, exist_ok=True)
+    pathlib.Path(directory).mkdir(exist_ok=True, parents=True)
     path = os.path.join(
         directory, f"{ct.value.lower()}-{uuid.uuid4().hex[:8]}.md"
     )
-    with open(path, "w", encoding="utf-8") as fh:
+    with pathlib.Path(path).open("w", encoding="utf-8") as fh:
         fh.write(text + "\n")
     return path
 
 
 def list_fragments(directory: str) -> list[tuple[str, ChangeType, list[str]]]:
     """All pending fragments as (path, change_type, [entry texts])."""
-    if not os.path.isdir(directory):
+    if not pathlib.Path(directory).is_dir():
         return []
     out = []
     for name in sorted(os.listdir(directory)):
@@ -66,7 +67,7 @@ def list_fragments(directory: str) -> list[tuple[str, ChangeType, list[str]]]:
             continue
         path = os.path.join(directory, name)
         ct = _TYPE_MAP.get(name.split("-", 1)[0].lower(), ChangeType.CHANGED)
-        with open(path, "r", encoding="utf-8") as fh:
+        with pathlib.Path(path).open("r", encoding="utf-8") as fh:
             texts = [
                 line.strip().lstrip("-* ").strip()
                 for line in fh.read().splitlines()
@@ -77,7 +78,7 @@ def list_fragments(directory: str) -> list[tuple[str, ChangeType, list[str]]]:
     return out
 
 
-def collect(changelog: "Changelog", directory: str) -> list[str]:
+def collect(changelog: Changelog, directory: str) -> list[str]:
     """
     Fold all pending fragments into the [Unreleased] section (creating it
     if needed). Returns the fragment file paths that were folded in —

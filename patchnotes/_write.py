@@ -9,7 +9,7 @@ and auto-fixing off-spec changelogs.
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ._models import Changelog
@@ -18,7 +18,7 @@ _COMPARE_RE = re.compile(r"^(?P<base>.+?)/compare/(?P<from>.+?)\.\.\.(?P<to>.+)$
 
 
 def _generated_links(
-    changelog: "Changelog", repo_url: str, tag_prefix: str = "v"
+    changelog: Changelog, repo_url: str, tag_prefix: str = "v"
 ) -> dict:
     """Generate Keep a Changelog compare-link footnotes for every release."""
     repo_url = repo_url.rstrip("/")
@@ -45,7 +45,7 @@ def _generated_links(
     return ordered
 
 
-def infer_repo_url(changelog: "Changelog") -> Optional[str]:
+def infer_repo_url(changelog: Changelog) -> str | None:
     """Infer the repository URL from any existing compare link, or None."""
     for url in changelog.links.values():
         m = _COMPARE_RE.match(url)
@@ -55,8 +55,8 @@ def infer_repo_url(changelog: "Changelog") -> Optional[str]:
 
 
 def to_markdown(
-    changelog: "Changelog",
-    repo_url: Optional[str] = None,
+    changelog: Changelog,
+    repo_url: str | None = None,
     tag_prefix: str = "v",
 ) -> str:
     """
@@ -112,7 +112,7 @@ def to_markdown(
     return "\n".join(lines) + "\n"
 
 
-def to_yaml(changelog: "Changelog") -> str:
+def to_yaml(changelog: Changelog) -> str:
     """
     Render a Changelog to the patchnotes YAML schema.
 

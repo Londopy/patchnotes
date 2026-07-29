@@ -14,8 +14,6 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 from datetime import date
-from typing import Optional
-
 from enum import Enum
 
 from . import _validation as _v
@@ -72,7 +70,7 @@ class Release:
     """A single versioned release block."""
 
     version: str
-    release_date: Optional[date]
+    release_date: date | None
     is_unreleased: bool
     entries: list[Entry] = field(default_factory=list)
     yanked: bool = False
@@ -124,14 +122,14 @@ class Changelog:
     #: and from to_dict() for backward compatibility; use validate().
     issues: list[ValidationIssue] = field(default_factory=list, repr=False, compare=False)
 
-    def latest(self) -> Optional[Release]:
+    def latest(self) -> Release | None:
         """Return the highest versioned (non-unreleased) release."""
         candidates = [r for r in self.releases if not r.is_unreleased]
         if not candidates:
             return None
         return max(candidates, key=lambda r: _parse_semver(r.version))
 
-    def unreleased(self) -> Optional[Release]:
+    def unreleased(self) -> Release | None:
         for r in self.releases:
             if r.is_unreleased:
                 return r
@@ -142,7 +140,7 @@ class Changelog:
         threshold = _parse_semver(version)
         return [r for r in self.releases if _parse_semver(r.version) > threshold]
 
-    def get_version(self, version: str) -> Optional[Release]:
+    def get_version(self, version: str) -> Release | None:
         for r in self.releases:
             if r.version == version:
                 return r
@@ -214,7 +212,7 @@ class Changelog:
             return issues
 
         seen: set[str] = set()
-        prev_key: Optional[tuple] = None
+        prev_key: tuple | None = None
         for r in self.releases:
             if r.version in seen:
                 issues.append(
@@ -288,7 +286,7 @@ class Changelog:
     def bump(
         self,
         version: str,
-        release_date: Optional[date] = None,
+        release_date: date | None = None,
         keep_unreleased: bool = True,
     ) -> Release:
         """
@@ -340,7 +338,7 @@ class Changelog:
         return new_release
 
     def _refresh_links_after_bump(
-        self, version: str, previous: Optional[Release]
+        self, version: str, previous: Release | None
     ) -> None:
         """Maintain compare-link footnotes, if the changelog uses them."""
         from ._write import _COMPARE_RE  # lazy: avoids circular import
@@ -384,7 +382,7 @@ class Changelog:
     # ── Remote fetching ───────────────────────────────────────────────────
 
     @classmethod
-    def from_url(cls, url: str, format: str = "auto", strict: bool = False) -> "Changelog":
+    def from_url(cls, url: str, format: str = "auto", strict: bool = False) -> Changelog:
         """
         Fetch and parse a remote changelog from any URL.
 
@@ -414,7 +412,7 @@ class Changelog:
         filename: str = "CHANGELOG.md",
         format: str = "auto",
         strict: bool = False,
-    ) -> "Changelog":
+    ) -> Changelog:
         """
         Fetch and parse a CHANGELOG.md directly from a GitHub repository.
 
@@ -438,7 +436,7 @@ class Changelog:
             cl = Changelog.from_github("psf", "requests", filename="HISTORY.md")
         """
 
-        def _fetch(branch_name: str) -> Optional[str]:
+        def _fetch(branch_name: str) -> str | None:
             url = (
                 f"https://raw.githubusercontent.com/"
                 f"{owner}/{repo}/{branch_name}/{filename}"

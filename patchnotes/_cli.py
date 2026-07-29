@@ -21,6 +21,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import pathlib
 import sys
 
 from . import __version__, parse
@@ -229,7 +230,7 @@ def main(argv=None) -> int:
         if args.file == "-":
             text = sys.stdin.read()
         else:
-            with open(args.file, "r", encoding="utf-8") as fh:
+            with pathlib.Path(args.file).open("r", encoding="utf-8") as fh:
                 text = fh.read()
     except FileNotFoundError:
         print(f"Error: file not found: {args.file}", file=sys.stderr)
@@ -458,10 +459,10 @@ def _cmd_bump(cl, args) -> int:
         return EXIT_FAIL
 
     text = _writer_for(args.file, args)(cl)
-    with open(args.file, "w", encoding="utf-8") as fh:
+    with pathlib.Path(args.file).open("w", encoding="utf-8") as fh:
         fh.write(text)
     for frag in collected_files:
-        os.remove(frag)
+        pathlib.Path(frag).unlink()
     if collected_files and not args.quiet:
         print(f"Collected and removed {len(collected_files)} fragment(s).")
     if not args.quiet:
@@ -486,7 +487,7 @@ def _cmd_convert(cl, args) -> int:
     if out == "-":
         sys.stdout.write(text)
         return EXIT_OK
-    with open(out, "w", encoding="utf-8") as fh:
+    with pathlib.Path(out).open("w", encoding="utf-8") as fh:
         fh.write(text)
     if not args.quiet:
         print(f"Wrote {out} ({len(cl.releases)} releases).")
@@ -502,7 +503,7 @@ def _cmd_fix(cl, args, github: bool) -> int:
     if args.file == "-":
         sys.stdout.write(text)
     else:
-        with open(args.file, "w", encoding="utf-8") as fh:
+        with pathlib.Path(args.file).open("w", encoding="utf-8") as fh:
             fh.write(text)
 
     if not args.quiet:
@@ -684,9 +685,9 @@ def _cmd_dep_requirements(args) -> int:
 
     old_path, new_path = args.params
     try:
-        with open(old_path, "r", encoding="utf-8") as fh:
+        with pathlib.Path(old_path).open("r", encoding="utf-8") as fh:
             old_text = fh.read()
-        with open(new_path, "r", encoding="utf-8") as fh:
+        with pathlib.Path(new_path).open("r", encoding="utf-8") as fh:
             new_text = fh.read()
     except OSError as e:
         print(f"Error: {e}", file=sys.stderr)

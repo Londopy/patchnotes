@@ -24,6 +24,7 @@ Off-spec changelogs render best-effort (the parser is lenient); run
 from __future__ import annotations
 
 import os
+import pathlib
 
 try:
     from mkdocs.config import config_options
@@ -81,7 +82,7 @@ class PatchnotesPlugin(BasePlugin):
         from patchnotes import parse_file, to_html
 
         path = self.config["file"]
-        if config is not None and not os.path.isabs(path):
+        if config is not None and not pathlib.Path(path).is_absolute():
             base = os.path.dirname(config.get("config_file_path") or "") or "."
             path = os.path.join(base, path)
 

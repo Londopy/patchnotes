@@ -6,7 +6,6 @@ Tests for v2.2.0: check-version, fragments, dep diffs, SARIF, badge.
 import json
 
 import pytest
-
 from patchnotes import ChangeType, parse, parse_file
 from patchnotes._cli import EXIT_FAIL, EXIT_OK, EXIT_USAGE, main
 from patchnotes._depdiff import find_github_repo, render_dep_diff

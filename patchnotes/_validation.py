@@ -12,7 +12,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
 
 
 class Severity(str, Enum):
@@ -35,7 +34,7 @@ class ValidationIssue:
     code: str
     message: str
     severity: Severity
-    line: Optional[int] = None
+    line: int | None = None
 
     def __str__(self) -> str:
         loc = f"line {self.line}: " if self.line is not None else ""

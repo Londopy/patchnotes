@@ -7,7 +7,6 @@ import io
 import json
 
 import pytest
-
 from patchnotes._cli import EXIT_FAIL, EXIT_OK, EXIT_USAGE, main
 
 GOOD = """\

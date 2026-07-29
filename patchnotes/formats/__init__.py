@@ -43,7 +43,7 @@ class FormatParser(ABC):
     extensions: tuple[str, ...] = ()
 
     @abstractmethod
-    def parse(self, text: str) -> "Changelog":
+    def parse(self, text: str) -> Changelog:
         """Parse ``text`` into a Changelog, collecting issues, never raising."""
 
     def sniff(self, text: str) -> bool:
@@ -78,7 +78,7 @@ def available_formats() -> list[str]:
     return sorted(_REGISTRY)
 
 
-def detect_format(text: str, filename: Optional[str] = None) -> FormatParser:
+def detect_format(text: str, filename: str | None = None) -> FormatParser:
     """
     Pick the best parser for the given content/filename.
 
@@ -98,10 +98,10 @@ def detect_format(text: str, filename: Optional[str] = None) -> FormatParser:
 
 # Register built-in formats. YAML registers itself only if importable;
 # actually *using* it without PyYAML raises a helpful error.
-from . import markdown as _markdown  # noqa: E402
+from . import markdown as _markdown  # ruff:ignore[module-import-not-at-top-of-file]
 
 register_format(_markdown.MarkdownFormat())
 
-from . import yaml_format as _yaml_format  # noqa: E402
+from . import yaml_format as _yaml_format  # ruff:ignore[module-import-not-at-top-of-file]
 
 register_format(_yaml_format.YamlFormat())

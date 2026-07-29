@@ -5,7 +5,7 @@ Top-level parse/validate entry points that route to the format registry.
 
 from __future__ import annotations
 
-from typing import Optional
+import pathlib
 
 from ._models import Changelog
 from ._validation import (
@@ -20,7 +20,7 @@ def parse(
     text: str,
     format: str = "auto",
     strict: bool = False,
-    filename: Optional[str] = None,
+    filename: str | None = None,
 ) -> Changelog:
     """
     Parse a changelog string into a Changelog object.
@@ -56,12 +56,12 @@ def parse(
 
 def parse_file(path: str, format: str = "auto", strict: bool = False) -> Changelog:
     """Parse a changelog file from disk (format auto-detected by extension)."""
-    with open(path, "r", encoding="utf-8") as f:
+    with pathlib.Path(path).open("r", encoding="utf-8") as f:
         return parse(f.read(), format=format, strict=strict, filename=path)
 
 
 def validate(
-    text: str, format: str = "auto", filename: Optional[str] = None
+    text: str, format: str = "auto", filename: str | None = None
 ) -> list[ValidationIssue]:
     """
     Validate a changelog string and return all issues found (never raises).
@@ -76,5 +76,5 @@ def validate(
 
 def validate_file(path: str, format: str = "auto") -> list[ValidationIssue]:
     """Validate a changelog file from disk and return all issues found."""
-    with open(path, "r", encoding="utf-8") as f:
+    with pathlib.Path(path).open("r", encoding="utf-8") as f:
         return validate(f.read(), format=format, filename=path)

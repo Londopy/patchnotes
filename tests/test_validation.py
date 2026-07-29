@@ -4,7 +4,6 @@ Tests for lenient parsing, strict mode, and cl.validate().
 """
 
 import pytest
-
 from patchnotes import (
     ChangelogValidationError,
     Severity,

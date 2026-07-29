@@ -48,14 +48,14 @@ from ._render import (
     to_rss,
     to_text,
 )
-from ._write import (
-    to_markdown,
-    to_yaml,
-)
 from ._validation import (
     ChangelogValidationError,
     Severity,
     ValidationIssue,
+)
+from ._write import (
+    to_markdown,
+    to_yaml,
 )
 from .formats import (
     FormatParser,
@@ -65,24 +65,24 @@ from .formats import (
 
 __version__ = "2.4.0"
 __all__ = [
+    "ChangeType",
+    "Changelog",
+    "ChangelogValidationError",
+    "Entry",
+    "FormatParser",
+    "Release",
+    "Severity",
+    "ValidationIssue",
+    "__version__",
+    "available_formats",
     "parse",
     "parse_file",
-    "validate",
-    "validate_file",
-    "Changelog",
-    "Release",
-    "Entry",
-    "ChangeType",
-    "ValidationIssue",
-    "Severity",
-    "ChangelogValidationError",
-    "FormatParser",
     "register_format",
-    "available_formats",
     "to_html",
+    "to_markdown",
     "to_rss",
     "to_text",
-    "to_markdown",
     "to_yaml",
-    "__version__",
+    "validate",
+    "validate_file",
 ]

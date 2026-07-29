@@ -11,8 +11,8 @@ In patchnotes 2.0 the parser was split into:
 Everything importable from here in 1.x still works.
 """
 
-from ._dispatch import parse, parse_file  # noqa: F401
-from ._models import (  # noqa: F401
+from ._dispatch import parse, parse_file  # ruff:ignore[unused-import]
+from ._models import (  # ruff:ignore[unused-import]
     Changelog,
     ChangeType,
     Entry,

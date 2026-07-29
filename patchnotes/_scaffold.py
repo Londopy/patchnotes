@@ -6,7 +6,7 @@ patchnotes._scaffold
 from __future__ import annotations
 
 import os
-from typing import Optional
+import pathlib
 
 STARTER_CHANGELOG = """\
 # Changelog
@@ -43,7 +43,7 @@ jobs:
 """
 
 
-def starter_changelog(repo_url: Optional[str] = None) -> str:
+def starter_changelog(repo_url: str | None = None) -> str:
     """The starter CHANGELOG.md content (strict-validation clean)."""
     text = STARTER_CHANGELOG
     if repo_url:
@@ -51,14 +51,14 @@ def starter_changelog(repo_url: Optional[str] = None) -> str:
     return text
 
 
-def write_changelog(path: str, repo_url: Optional[str] = None) -> None:
+def write_changelog(path: str, repo_url: str | None = None) -> None:
     """Create a starter changelog; refuses to overwrite."""
-    if os.path.exists(path):
+    if pathlib.Path(path).exists():
         raise FileExistsError(
             f"{path} already exists — refusing to overwrite. "
             f"Run `patchnotes {path} validate` to check it instead."
         )
-    with open(path, "w", encoding="utf-8") as fh:
+    with pathlib.Path(path).open("w", encoding="utf-8") as fh:
         fh.write(starter_changelog(repo_url))
 
 
@@ -67,10 +67,10 @@ def write_workflow(changelog_path: str) -> str:
     base = os.path.dirname(changelog_path) or "."
     wf_dir = os.path.join(base, ".github", "workflows")
     wf_path = os.path.join(wf_dir, "changelog.yml")
-    if os.path.exists(wf_path):
+    if pathlib.Path(wf_path).exists():
         raise FileExistsError(f"{wf_path} already exists — refusing to overwrite.")
-    os.makedirs(wf_dir, exist_ok=True)
+    pathlib.Path(wf_dir).mkdir(exist_ok=True, parents=True)
     rel = os.path.basename(changelog_path)
-    with open(wf_path, "w", encoding="utf-8") as fh:
+    with pathlib.Path(wf_path).open("w", encoding="utf-8") as fh:
         fh.write(STARTER_WORKFLOW.format(file=rel))
     return wf_path

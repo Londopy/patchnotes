@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import re
 from datetime import date
-from typing import Optional
 
 from .. import _validation as _v
 from .._models import Changelog, ChangeType, Entry, Release
@@ -76,7 +75,7 @@ _TYPE_ALIASES = {
 
 def _parse_date(
     raw: str, lineno: int, issues: list[ValidationIssue]
-) -> Optional[date]:
+) -> date | None:
     """Parse a release date, recording an issue if it's off-spec."""
     from datetime import datetime
 
@@ -126,7 +125,7 @@ class MarkdownFormat(FormatParser):
         issues = changelog.issues
         lines = self._normalize_setext(text.splitlines(), issues)
 
-        current_release: Optional[Release] = None
+        current_release: Release | None = None
         current_type: ChangeType = ChangeType.CHANGED
         in_header = True
 
@@ -265,7 +264,7 @@ class MarkdownFormat(FormatParser):
 
     def _try_release_header(
         self, line: str, lineno: int, issues: list[ValidationIssue]
-    ) -> Optional[Release]:
+    ) -> Release | None:
         """Parse '## [version] - date' (spec) or '## version - date' (loose)."""
         bracketed = True
         m = VERSION_HEADER.match(line)

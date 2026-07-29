@@ -7,7 +7,6 @@ CLI commands (bump, convert, fix, unreleased --fail-if-empty).
 from datetime import date
 
 import pytest
-
 from patchnotes import (
     ChangeType,
     parse,

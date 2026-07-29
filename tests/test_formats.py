@@ -4,7 +4,6 @@ Tests for the format registry, auto-detection, and the YAML format.
 """
 
 import pytest
-
 from patchnotes import (
     ChangeType,
     FormatParser,

@@ -9,12 +9,7 @@ PR annotations.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from ._validation import Severity
-
-if TYPE_CHECKING:
-    from ._validation import ValidationIssue
 
 _RULE_DESCRIPTIONS = {
     "PN101": "Date is not ISO 8601 (YYYY-MM-DD)",

@@ -4,9 +4,10 @@ Comprehensive tests for patchnotes parser.
 Run with: pytest tests/
 """
 
-import pytest
 from datetime import date
-from patchnotes import parse, parse_file, Changelog, Release, Entry, ChangeType
+
+import pytest
+from patchnotes import ChangeType, parse, parse_file
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 

@@ -4,18 +4,15 @@ Tests for v2.4.0: init, dep --requirements, mkdocs plugin, and the
 empty-[Unreleased] validation fix.
 """
 
-import json
-import os
 
 import pytest
-
-from patchnotes import parse, parse_file
 from patchnotes import _validation as codes
+from patchnotes import parse, parse_file
 from patchnotes._cli import EXIT_FAIL, EXIT_OK, EXIT_USAGE, main
 from patchnotes._depdiff import diff_requirements, parse_requirements
 
-
 # ── Empty [Unreleased] is spec-normal ─────────────────────────────────────────
+
 
 class TestEmptyUnreleased:
     def test_empty_unreleased_no_warning(self):
@@ -99,9 +96,10 @@ class TestRequirementsDiff:
         assert removed == ["gone"]
 
     def test_cli_requirements_mode(self, tmp_path, capsys, monkeypatch):
-        import patchnotes._depdiff as dd
-        from patchnotes import ChangeType, Changelog, Entry, Release
         from datetime import date
+
+        import patchnotes._depdiff as dd
+        from patchnotes import Changelog, ChangeType, Entry, Release
 
         fake = Changelog(releases=[
             Release("2.32.0", date(2024, 5, 20), False,
@@ -125,9 +123,10 @@ class TestRequirementsDiff:
         assert "Removed dependencies: gone" in out
 
     def test_cli_requirements_strict_fails_on_flagged(self, tmp_path, monkeypatch):
-        import patchnotes._depdiff as dd
-        from patchnotes import ChangeType, Changelog, Entry, Release
         from datetime import date
+
+        import patchnotes._depdiff as dd
+        from patchnotes import Changelog, ChangeType, Entry, Release
         fake = Changelog(releases=[
             Release("2.32.0", date(2024, 5, 20), False,
                     [Entry("Breaking change", ChangeType.BREAKING)]),
@@ -144,6 +143,7 @@ class TestRequirementsDiff:
 
     def test_resolution_failure_is_reported_not_fatal(self, tmp_path, capsys, monkeypatch):
         import patchnotes._depdiff as dd
+
         def boom(pkg): raise ValueError("no repo")
         monkeypatch.setattr(dd, "find_github_repo", boom)
         old_f, new_f = tmp_path / "old.txt", tmp_path / "new.txt"
@@ -188,4 +188,4 @@ class TestMkdocsPlugin:
     def test_registered_as_entry_point(self):
         # entry point declared in pyproject (verified after install in CI);
         # here just confirm the class importable at the declared path
-        from patchnotes.mkdocs_plugin import PatchnotesPlugin  # noqa: F401
+        from patchnotes.mkdocs_plugin import PatchnotesPlugin  # ruff:ignore[unused-import]
