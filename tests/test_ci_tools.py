@@ -187,16 +187,113 @@ class TestSarif:
 
 # ── badge ─────────────────────────────────────────────────────────────────────
 
+BADGE_CLEAN = """\
+# Proj
+
+## [1.0.0] - 2024-01-01
+
+### Added
+- Initial release
+"""
+
+#: nonstandard section heading -> WARNING, no ERROR
+BADGE_WARNY = """\
+# Proj
+
+## [1.0.0] - 2024-01-01
+
+### Improvements
+- faster
+"""
+
+#: duplicate version + malformed date -> ERROR
+BADGE_BROKEN = """\
+## [1.0.0] - 01-02-2024
+
+### Added
+- a
+
+## [1.0.0] - 2024-01-01
+
+### Added
+- b
+"""
+
+BADGE_UNRELEASED_ONLY = """\
+# Proj
+
+## [Unreleased]
+
+### Added
+- Not shipped yet
+"""
+
+
+def _badge(tmp_path, capsys, text, *flags):
+    """Run `badge` over `text` and return the parsed JSON."""
+    path = tmp_path / "CHANGELOG.md"
+    path.write_text(text, encoding="utf-8")
+    assert main([str(path), "badge", *flags]) == EXIT_OK
+    return json.loads(capsys.readouterr().out)
+
+
 class TestBadge:
-    def test_badge_json(self, repo, capsys):
+    def test_shields_endpoint_shape(self, repo, capsys):
         assert main([str(repo / "CHANGELOG.md"), "badge"]) == EXIT_OK
         data = json.loads(capsys.readouterr().out)
+        assert data["schemaVersion"] == 1
+        assert set(data) == {"schemaVersion", "label", "message", "color"}
+        assert data["label"] == "changelog"
+
+    def test_clean_is_green_with_version(self, tmp_path, capsys):
+        data = _badge(tmp_path, capsys, BADGE_CLEAN)
+        assert data["message"] == "v1.0.0"
+        assert data["color"] == "brightgreen"
+
+    def test_warnings_are_yellow_and_counted(self, tmp_path, capsys):
+        data = _badge(tmp_path, capsys, BADGE_WARNY)
+        assert data["color"] == "yellow"
+        assert data["message"].startswith("v1.0.0 · ")
+        assert "warning" in data["message"]
+
+    def test_errors_are_red(self, tmp_path, capsys):
+        data = _badge(tmp_path, capsys, BADGE_BROKEN)
         assert data == {
             "schemaVersion": 1,
             "label": "changelog",
-            "message": "v2.1.0",
-            "color": "orange",
+            "message": "invalid",
+            "color": "red",
         }
+
+    def test_no_release_is_grey(self, tmp_path, capsys):
+        data = _badge(tmp_path, capsys, BADGE_UNRELEASED_ONLY)
+        assert data["message"] == "unreleased"
+        assert data["color"] == "lightgrey"
+
+    def test_strict_promotes_warnings_to_invalid(self, tmp_path, capsys):
+        data = _badge(tmp_path, capsys, BADGE_WARNY, "--strict")
+        assert data["message"] == "invalid"
+        assert data["color"] == "red"
+
+    def test_strict_does_not_abort_on_broken_file(self, tmp_path, capsys):
+        """--strict must still produce a badge, not bail out early."""
+        data = _badge(tmp_path, capsys, BADGE_BROKEN, "--strict")
+        assert data["color"] == "red"
+
+    def test_custom_label(self, tmp_path, capsys):
+        data = _badge(tmp_path, capsys, BADGE_CLEAN, "--label", "keep a changelog")
+        assert data["label"] == "keep a changelog"
+
+    def test_no_version_reports_state_only(self, tmp_path, capsys):
+        assert _badge(tmp_path, capsys, BADGE_CLEAN, "--no-version")["message"] == "valid"
+        warny = _badge(tmp_path, capsys, BADGE_WARNY, "--no-version")
+        assert warny["message"] == "1 warning"
+        assert "v1.0.0" not in warny["message"]
+
+    def test_warning_plural(self, tmp_path, capsys):
+        many = BADGE_CLEAN + "\n## [0.9.0] - 2024-01-02\n\n### Improvements\n- x\n"
+        data = _badge(tmp_path, capsys, many, "--no-version")
+        assert data["message"].endswith("warnings") or data["message"] == "1 warning"
 
 
 # ── RST/setext changelogs (requests-style HISTORY.md) ─────────────────────────

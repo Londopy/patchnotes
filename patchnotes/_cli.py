@@ -166,6 +166,18 @@ def main(argv=None) -> int:
         help="With 'init': also scaffold .github/workflows/changelog.yml",
     )
     parser.add_argument(
+        "--label",
+        metavar="TEXT",
+        default="changelog",
+        help="With 'badge': left-hand label text (default: changelog)",
+    )
+    parser.add_argument(
+        "--no-version",
+        action="store_true",
+        help="With 'badge': report validation state only "
+        "(valid / N warnings / invalid), omitting the version",
+    )
+    parser.add_argument(
         "--all",
         action="store_true",
         dest="show_all",
@@ -251,10 +263,11 @@ def main(argv=None) -> int:
     if args.command == "validate":
         return _cmd_validate(cl, args, strict=strict, github=github)
 
-    # Outside `validate`/`fix`, --strict means "refuse to operate on a
-    # broken file" (ERROR-severity issues; use `validate --strict` to also
+    # Outside `validate`/`fix`/`badge`, --strict means "refuse to operate on
+    # a broken file" (ERROR-severity issues; use `validate --strict` to also
     # fail on warnings). `fix` is exempt: repairing broken files is its job.
-    if strict and args.command != "fix":
+    # `badge` is exempt: reporting that a file is broken is its job.
+    if strict and args.command not in ("fix", "badge"):
         issues = cl.validate()
         if any(i.severity is Severity.ERROR for i in issues):
             for i in issues:
@@ -288,7 +301,7 @@ def main(argv=None) -> int:
     if args.command == "check-version":
         return _cmd_check_version(cl, args)
     if args.command == "badge":
-        return _cmd_badge(cl, args)
+        return _cmd_badge(cl, args, strict=strict)
     if args.command == "convert":
         return _cmd_convert(cl, args)
     if args.command == "fix":
@@ -746,14 +759,41 @@ def _cmd_dep_requirements(args) -> int:
     return EXIT_OK
 
 
-def _cmd_badge(cl, args) -> int:
+def _cmd_badge(cl, args, strict: bool = False) -> int:
+    """Print a shields.io endpoint JSON describing the changelog's state.
+
+    The colour encodes validation, the message encodes the version, so a
+    single badge answers both "what shipped last?" and "is the file sane?".
+
+    Always exits 0: generating a badge should never fail a workflow, even
+    for a broken changelog — that is what `validate` is for.
+    """
     latest = cl.latest()
+    issues = cl.validate()
+    errors = sum(1 for i in issues if i.severity is Severity.ERROR)
+    warnings = sum(1 for i in issues if i.severity is Severity.WARNING)
+    version = f"v{latest.version}" if latest else None
+
+    if errors or (strict and warnings):
+        message, color = "invalid", "red"
+    elif not latest:
+        message, color = "unreleased", "lightgrey"
+    elif warnings:
+        plural = "s" if warnings != 1 else ""
+        message = f"{warnings} warning{plural}"
+        if not args.no_version:
+            message = f"{version} · {message}"
+        color = "yellow"
+    else:
+        message = "valid" if args.no_version else version
+        color = "brightgreen"
+
     print(json.dumps(
         {
             "schemaVersion": 1,
-            "label": "changelog",
-            "message": f"v{latest.version}" if latest else "none",
-            "color": "orange" if latest else "lightgrey",
+            "label": args.label,
+            "message": message,
+            "color": color,
         }
     ))
     return EXIT_OK

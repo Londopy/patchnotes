@@ -1,0 +1,37 @@
+# Copy to .github/workflows/changelog-badge.yml in your repo.
+# Keeps a README badge in sync with CHANGELOG.md on every push to main:
+# green with the latest version when the file is clean, yellow with a
+# warning count, red when validation fails.
+#
+# Setup (gist route — works on any repo):
+#   1. Create an empty public gist at https://gist.github.com
+#   2. Copy the hash from its URL into a repo variable, BADGE_GIST_ID
+#   3. Create a PAT with only the 'gist' scope, store it as GIST_TOKEN
+#   4. Add the badge to your README:
+#
+#      [![changelog](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/USER/GIST_ID/raw/changelog-badge.json)](CHANGELOG.md)
+#
+# For the gh-pages route instead, drop badge-gist-id/badge-token, set
+# `badge: gh-pages`, and add `permissions: contents: write`.
+
+name: Changelog badge
+
+on:
+  push:
+    branches: [main]
+    paths: ["CHANGELOG.md"]
+  workflow_dispatch:
+
+jobs:
+  badge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: Londopy/patchnotes@v2
+        with:
+          file: CHANGELOG.md
+          strict: "true"
+          badge: gist
+          badge-gist-id: ${{ vars.BADGE_GIST_ID }}
+          badge-token: ${{ secrets.GIST_TOKEN }}

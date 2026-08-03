@@ -2,6 +2,19 @@
 
 Parse, query, and validate changelogs in Python and CI.
 
+## [Unreleased]
+
+## [2.5.0] - 2026-08-02
+
+### Added
+
+- The `badge` command now reports validation state as well as version: green for a clean parse, yellow with a warning count, red for errors, grey when nothing is released yet. `--label` sets the left-hand text and `--no-version` reports state alone.
+- GitHub Action can publish the badge JSON itself — `badge: gist` (any repo, needs `badge-gist-id` and a `badge-token`) or `badge: gh-pages` (commits to a branch using the built-in token). New `badge-json` output exposes the generated JSON.
+
+### Changed
+
+- `badge` is now exempt from the global `--strict` guard and always exits `0`, so a broken changelog produces a red badge instead of aborting the step. Under `--strict` it treats warnings as invalid.
+
 ## [2.4.0] - 2026-07-19
 
 ### Added

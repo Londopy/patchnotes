@@ -45,7 +45,7 @@ They run in opposite directions. **git-cliff generates** a changelog from your g
 - [Access releases](#access-releases) · [Query entries](#query-entries) · [Diff & history](#diff-and-history)
 - [Serialize](#serialize-to-json) · [Write back out](#write-it-back-out) · [Release automation](#release-automation)
 - [Rendering](#rendering) — [HTML](#html) · [RSS](#rss) · [Plain text](#plain-text)
-- [CLI](#cli) · [GitHub Actions](#github-actions) · [pre-commit](#pre-commit)
+- [CLI](#cli) · [GitHub Actions](#github-actions) · [Badge](#badge) · [pre-commit](#pre-commit)
 - [Data model](#data-model) · [Changelog format](#changelog-format)
 
 ---
@@ -423,6 +423,57 @@ The action also exposes the latest version as an output:
 ```
 
 See [`examples/workflows/`](https://github.com/Londopy/patchnotes/blob/main/examples/workflows) for complete workflows, including publishing GitHub Releases from changelog notes.
+
+---
+
+## Badge
+
+`patchnotes CHANGELOG.md badge` prints a [shields.io endpoint](https://shields.io/badges/endpoint-badge) JSON. The message carries the latest version, the colour carries validation state, so one badge answers both "what shipped last?" and "is the changelog actually well-formed?":
+
+| Changelog state | Badge |
+| --- | --- |
+| Parses clean, no issues | ![changelog v2.4.0](https://img.shields.io/badge/changelog-v2.4.0-brightgreen) |
+| Valid, but has warnings | ![changelog warnings](https://img.shields.io/badge/changelog-v2.4.0%20%C2%B7%203%20warnings-yellow) |
+| Errors (bad dates, duplicate versions…) | ![changelog invalid](https://img.shields.io/badge/changelog-invalid-red) |
+| Nothing released yet | ![changelog unreleased](https://img.shields.io/badge/changelog-unreleased-lightgrey) |
+
+With `--strict`, warnings count as invalid. With `--no-version`, the message is the state alone (`valid` / `3 warnings` / `invalid`). `--label` changes the left-hand text. `badge` always exits `0` — generating a badge should never fail a build; that's `validate`'s job.
+
+### Publishing it
+
+The action writes the JSON somewhere shields.io can read it. Nothing runs on patchnotes' servers — the file lives in your own gist or branch.
+
+**Gist** — works on any repo. Create one empty public gist, take the hash from its URL, and add a token with `gist` scope as a secret:
+
+```yaml
+- uses: Londopy/patchnotes@v2
+  with:
+    strict: "true"
+    badge: gist
+    badge-gist-id: ${{ vars.BADGE_GIST_ID }}
+    badge-token: ${{ secrets.GIST_TOKEN }}
+```
+
+```markdown
+[![changelog](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/USER/GIST_ID/raw/changelog-badge.json)](CHANGELOG.md)
+```
+
+**gh-pages** — no token or secret needed, but only suits repos that already publish a branch. Needs `permissions: contents: write`:
+
+```yaml
+- uses: Londopy/patchnotes@v2
+  with:
+    strict: "true"
+    badge: gh-pages
+```
+
+```markdown
+[![changelog](https://img.shields.io/endpoint?url=https://USER.github.io/REPO/changelog-badge.json)](CHANGELOG.md)
+```
+
+Both routes take `badge-file` (default `changelog-badge.json`) and `badge-label`; gh-pages also takes `badge-branch` (default `gh-pages`).
+
+Two things worth knowing. The badge step runs *before* validation, so a changelog that fails `--strict` still turns the badge red rather than leaving a stale green one — a badge that can't go red isn't worth much. And shields.io caches endpoint responses for a few minutes, so expect a short lag after a release.
 
 ---
 

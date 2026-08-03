@@ -49,15 +49,54 @@ inputs:
       a tag push and `permissions: contents: write`.
     required: false
     default: "false"
+  badge:
+    description: >-
+      Publish a shields.io endpoint JSON so a README badge tracks the
+      changelog. 'gist' works on any repo (needs badge-gist-id and a
+      badge-token with gist scope); 'gh-pages' commits to a branch using
+      the built-in token (needs `permissions: contents: write`); 'none'
+      disables publishing. The badge is written even when validation
+      fails — that is how it turns red.
+    required: false
+    default: "none"
+  badge-label:
+    description: "Left-hand label text on the badge."
+    required: false
+    default: "changelog"
+  badge-gist-id:
+    description: >-
+      Target gist ID when badge is 'gist'. Create an empty public gist
+      once and pass its ID (the hash in its URL).
+    required: false
+    default: ""
+  badge-token:
+    description: >-
+      Token with 'gist' scope, when badge is 'gist'. Store it as a repo
+      secret. Not used by the gh-pages route.
+    required: false
+    default: ""
+  badge-file:
+    description: >-
+      Filename for the badge JSON — the file inside the gist, or the path
+      within the gh-pages branch.
+    required: false
+    default: "changelog-badge.json"
+  badge-branch:
+    description: "Branch to commit to when badge is 'gh-pages'."
+    required: false
+    default: "gh-pages"
   version:
     description: "patchnotes version spec to install (pip requirement specifier)."
     required: false
-    default: "patchnotes>=2.2.0"
+    default: "patchnotes>=2.5.0"
 
 outputs:
   latest-version:
     description: "The latest released version found in the changelog."
     value: ${{ steps.query.outputs.latest-version }}
+  badge-json:
+    description: "The shields.io endpoint JSON generated for the badge."
+    value: ${{ steps.badge.outputs.json }}
 
 runs:
   using: "composite"
@@ -65,6 +104,72 @@ runs:
     - name: Install patchnotes
       shell: bash
       run: python -m pip install --quiet "${{ inputs.version }}"
+
+    # Badge generation runs *before* validation on purpose: a failing
+    # validate step ends the job, and a badge that can't go red is worse
+    # than no badge at all.
+    - name: Generate badge JSON
+      id: badge
+      if: inputs.badge != 'none'
+      shell: bash
+      run: |
+        ARGS=""
+        if [ "${{ inputs.strict }}" = "true" ]; then
+          ARGS="--strict"
+        fi
+        # A changelog too broken to parse still deserves a red badge.
+        patchnotes "${{ inputs.file }}" badge --label "${{ inputs.badge-label }}" $ARGS \
+          > badge.json 2>/dev/null \
+          || printf '{"schemaVersion":1,"label":"%s","message":"invalid","color":"red"}\n' \
+               "${{ inputs.badge-label }}" > badge.json
+        cat badge.json
+        echo "json=$(cat badge.json)" >> "$GITHUB_OUTPUT"
+
+    - name: Publish badge to gist
+      if: inputs.badge == 'gist'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.badge-token }}
+        GIST_ID: ${{ inputs.badge-gist-id }}
+        BADGE_FILE: ${{ inputs.badge-file }}
+      run: |
+        if [ -z "$GIST_ID" ] || [ -z "$GH_TOKEN" ]; then
+          echo "::error::badge: gist requires both badge-gist-id and badge-token."
+          exit 1
+        fi
+        jq -n --arg name "$BADGE_FILE" --rawfile body badge.json \
+          '{files: {($name): {content: $body}}}' > badge-payload.json
+        gh api --method PATCH "gists/$GIST_ID" --input badge-payload.json --silent
+        echo "Published $BADGE_FILE to gist $GIST_ID"
+
+    - name: Publish badge to gh-pages
+      if: inputs.badge == 'gh-pages'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        BRANCH: ${{ inputs.badge-branch }}
+        BADGE_FILE: ${{ inputs.badge-file }}
+      run: |
+        REMOTE="https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY"
+        if ! git clone --depth 1 --branch "$BRANCH" "$REMOTE" .badge-pages 2>/dev/null; then
+          echo "Branch $BRANCH not found — creating it."
+          git clone --depth 1 "$REMOTE" .badge-pages
+          git -C .badge-pages checkout --orphan "$BRANCH"
+          git -C .badge-pages rm -rf . >/dev/null 2>&1 || true
+        fi
+        mkdir -p "$(dirname ".badge-pages/$BADGE_FILE")"
+        cp badge.json ".badge-pages/$BADGE_FILE"
+        cd .badge-pages
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git add "$BADGE_FILE"
+        if git diff --cached --quiet; then
+          echo "Badge unchanged — nothing to push."
+        else
+          git commit -m "chore: update changelog badge"
+          git push origin "HEAD:$BRANCH"
+          echo "Published $BADGE_FILE to $BRANCH"
+        fi
 
     - name: Validate changelog
       shell: bash
