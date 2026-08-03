@@ -4,6 +4,10 @@ Parse, query, and validate changelogs in Python and CI.
 
 ## [Unreleased]
 
+### Changed
+
+- CI now dogfoods the badge: `ci.yml` publishes patchnotes' own changelog badge to the `gh-pages` branch on every push to main, and skips publishing on pull requests so fork PRs don't need a write token.
+
 ## [2.5.0] - 2026-08-02
 
 ### Added

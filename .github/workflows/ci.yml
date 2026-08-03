@@ -28,18 +28,23 @@ jobs:
   changelog:
     name: Validate own changelog (dogfood)
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # the badge step commits to the gh-pages branch
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      # patchnotes validating patchnotes, via its own action, from source
+      # patchnotes validating patchnotes, via its own action, from source.
+      # On pushes to main it also publishes its own README badge; on PRs
+      # (including from forks, which have no write token) it just validates.
       - uses: ./
         with:
           file: CHANGELOG.md
           strict: "true"
           check-version: pyproject.toml
           version: "."
+          badge: ${{ github.event_name == 'push' && 'gh-pages' || 'none' }}
 
   sarif:
     name: Upload changelog SARIF to code scanning

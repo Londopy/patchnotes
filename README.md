@@ -1,6 +1,6 @@
 # patchnotes
 
-[![Downloads](https://img.shields.io/pepy/dt/patchnotes)](https://pepy.tech/project/patchnotes) [![PyPI](https://img.shields.io/pypi/v/patchnotes)](https://pypi.org/project/patchnotes/) [![Python versions](https://img.shields.io/pypi/pyversions/patchnotes)](https://pypi.org/project/patchnotes/) [![Publish to PyPI](https://github.com/Londopy/patchnotes/actions/workflows/publish.yml/badge.svg)](https://github.com/Londopy/patchnotes/actions/workflows/publish.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://github.com/Londopy/patchnotes/blob/main/LICENSE) [![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)](https://github.com/Londopy/patchnotes/blob/main/pyproject.toml) [![Typed](https://img.shields.io/badge/typed-yes-blue)](https://github.com/Londopy/patchnotes) [![Keep a Changelog](https://img.shields.io/badge/changelog-keep--a--changelog-orange)](https://keepachangelog.com)
+[![Downloads](https://img.shields.io/pepy/dt/patchnotes)](https://pepy.tech/project/patchnotes) [![PyPI](https://img.shields.io/pypi/v/patchnotes)](https://pypi.org/project/patchnotes/) [![Python versions](https://img.shields.io/pypi/pyversions/patchnotes)](https://pypi.org/project/patchnotes/) [![Publish to PyPI](https://github.com/Londopy/patchnotes/actions/workflows/publish.yml/badge.svg)](https://github.com/Londopy/patchnotes/actions/workflows/publish.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://github.com/Londopy/patchnotes/blob/main/LICENSE) [![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)](https://github.com/Londopy/patchnotes/blob/main/pyproject.toml) [![Typed](https://img.shields.io/badge/typed-yes-blue)](https://github.com/Londopy/patchnotes) [![changelog](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Londopy/patchnotes/gh-pages/changelog-badge.json)](https://github.com/Londopy/patchnotes/blob/main/CHANGELOG.md) [![Keep a Changelog](https://img.shields.io/badge/changelog-keep--a--changelog-orange)](https://keepachangelog.com)
 
 **Your `CHANGELOG.md` is the one file in every repo you can't query. patchnotes fixes that.**
 
@@ -458,7 +458,7 @@ The action writes the JSON somewhere shields.io can read it. Nothing runs on pat
 [![changelog](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/USER/GIST_ID/raw/changelog-badge.json)](CHANGELOG.md)
 ```
 
-**gh-pages** — no token or secret needed, but only suits repos that already publish a branch. Needs `permissions: contents: write`:
+**gh-pages** — no token, secret, or manual setup at all. The branch is created on first run, and shields reads the file straight off `raw.githubusercontent.com`, so you don't need GitHub Pages enabled. Just add `permissions: contents: write`:
 
 ```yaml
 - uses: Londopy/patchnotes@v2
@@ -468,10 +468,14 @@ The action writes the JSON somewhere shields.io can read it. Nothing runs on pat
 ```
 
 ```markdown
-[![changelog](https://img.shields.io/endpoint?url=https://USER.github.io/REPO/changelog-badge.json)](CHANGELOG.md)
+[![changelog](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/USER/REPO/gh-pages/changelog-badge.json)](CHANGELOG.md)
 ```
 
+If you do publish Pages, `https://USER.github.io/REPO/changelog-badge.json` works too and avoids raw's shorter cache window.
+
 Both routes take `badge-file` (default `changelog-badge.json`) and `badge-label`; gh-pages also takes `badge-branch` (default `gh-pages`).
+
+This repository dogfoods it: [`ci.yml`](https://github.com/Londopy/patchnotes/blob/main/.github/workflows/ci.yml) publishes the badge at the top of this README on every push to `main`, and skips publishing on pull requests so fork PRs don't need a write token.
 
 Two things worth knowing. The badge step runs *before* validation, so a changelog that fails `--strict` still turns the badge red rather than leaving a stale green one — a badge that can't go red isn't worth much. And shields.io caches endpoint responses for a few minutes, so expect a short lag after a release.
 
