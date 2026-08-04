@@ -4,6 +4,8 @@ Parse, query, and validate changelogs in Python and CI.
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-08-04
+
 ### Added
 
 - reStructuredText changelog parser (`patchnotes.parse(text, format="rst")`, or automatic for `.rst` files). Learns the document's own heading hierarchy from section adornments, skips directives and comments, and reduces inline rST markup to plain text. Issue codes match the markdown parser's, so quality is comparable across formats.
@@ -11,7 +13,13 @@ Parse, query, and validate changelogs in Python and CI.
 
 ### Changed
 
+- `.rst` files now parse with the reStructuredText parser. Previously the extension matched no format and fell through to the markdown parser, which recovered setext-underlined headers but little else — so `parse_file("CHANGES.rst")` may now return more releases, different entries, and different issue codes than it did in 2.5.x. Setext-underlined *markdown* is unaffected: the two shapes are ambiguous, so rST is auto-detected only on content markdown cannot produce.
 - CI now dogfoods the badge: `ci.yml` publishes patchnotes' own changelog badge to the `gh-pages` branch on every push to main, and skips publishing on pull requests so fork PRs don't need a write token.
+- The sdist no longer ships `research/`, `examples/`, or `.github/`. The wheel was already scoped to the package; the sdist was picking up everything untracked by `.gitignore`, including ~220 KB of ecosystem-scan data.
+
+### Fixed
+
+- `__version__` now matches the released version. It was left at `2.5.0` when 2.5.1 shipped, so `patchnotes --version` and `patchnotes.__version__` under-reported by a patch release. The `check-version` command compares the changelog against `pyproject.toml`, which was correct, so nothing caught it — `patchnotes/__init__.py` is now part of the release checklist.
 
 ## [2.5.1] - 2026-08-04
 

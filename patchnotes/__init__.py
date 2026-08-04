@@ -63,7 +63,7 @@ from .formats import (
     register_format,
 )
 
-__version__ = "2.5.0"
+__version__ = "2.6.0"
 __all__ = [
     "parse",
     "parse_file",

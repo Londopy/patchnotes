@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "patchnotes"
-version = "2.5.1"
-description = "Parse, query, and validate changelogs (Keep a Changelog markdown, YAML) in Python and CI"
+version = "2.6.0"
+description = "Parse, query, and validate changelogs (Keep a Changelog markdown, reStructuredText, YAML) in Python and CI"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"
@@ -22,6 +22,7 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Libraries",
     "Topic :: Text Processing :: Markup :: Markdown",
+    "Topic :: Text Processing :: Markup :: reStructuredText",
     "Typing :: Typed",
 ]
 
@@ -41,6 +42,12 @@ Repository = "https://github.com/Londopy/patchnotes"
 
 [tool.hatch.build.targets.wheel]
 packages = ["patchnotes"]
+
+[tool.hatch.build.targets.sdist]
+# The ecosystem scan is research output, not package content. It is archived
+# on Zenodo and lives in the repository; shipping ~220 KB of scan data to
+# every `pip download` serves no one.
+exclude = ["research/", "examples/", ".github/"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
