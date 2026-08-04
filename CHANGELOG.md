@@ -8,6 +8,22 @@ Parse, query, and validate changelogs in Python and CI.
 
 - CI now dogfoods the badge: `ci.yml` publishes patchnotes' own changelog badge to the `gh-pages` branch on every push to main, and skips publishing on pull requests so fork PRs don't need a write token.
 
+## [2.5.1] - 2026-08-04
+
+### Fixed
+
+- Version ordering now follows the precedence rules in the Semantic Versioning specification (section 11). Pre-release suffixes were previously discarded, so `1.0.0-rc.1` and `1.0.0` compared equal and `latest()` could return the release candidate instead of the final release. Pre-release identifiers now compare field by field, numeric identifiers order below alphanumeric ones, and build metadata is ignored for precedence.
+- Corrected the release dates recorded for 1.0.0 and 1.1.0, which predated the repository's own first commit. Both were published on 2026-04-23.
+
+### Changed
+
+- The source now passes `mypy --strict`, which `pyproject.toml` had declared but the code did not satisfy. The check is clean whether or not the optional `mkdocs` extra is installed. Annotation-only change; no runtime behaviour differs.
+- Corrected the "zero dependencies" claim in the README: PyYAML has been a required dependency since 2.0.1.
+
+### Added
+
+- Citation metadata (`CITATION.cff`, `.zenodo.json`) and a contributor guide (`CONTRIBUTING.md`), so releases are archived to Zenodo with a citable DOI.
+
 ## [2.5.0] - 2026-08-02
 
 ### Added
@@ -91,14 +107,14 @@ Parse, query, and validate changelogs in Python and CI.
 - Composite GitHub Action (`action.yml`) so workflows can write `uses: Londopy/patchnotes@v2`.
 - Common off-spec section aliases ("Bug Fixes", "Features", "Improvements", ...) are mapped to their Keep a Changelog equivalents with a warning.
 
-## [1.1.0] - 2026-05-02
+## [1.1.0] - 2026-04-23
 
 ### Added
 
 - `Changelog.from_github()` with automatic `master` branch fallback.
 - `to_rss()` renderer.
 
-## [1.0.0] - 2026-03-20
+## [1.0.0] - 2026-04-23
 
 ### Added
 

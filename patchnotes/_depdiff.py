@@ -18,7 +18,7 @@ import json
 import re
 import urllib.error
 import urllib.request
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, TypedDict
 
 from ._models import Changelog, ChangeType
 
@@ -34,12 +34,28 @@ CHANGELOG_FILENAMES = (
 )
 
 
-def _get_json(url: str) -> dict:
+class _PyPIInfo(TypedDict, total=False):
+    """The part of PyPI's ``info`` object this module reads."""
+
+    project_urls: Optional[dict[str, str]]
+    home_page: Optional[str]
+
+
+class _PyPIProject(TypedDict, total=False):
+    """The part of PyPI's project JSON this module reads."""
+
+    info: _PyPIInfo
+
+
+def _get_json(url: str) -> _PyPIProject:
     req = urllib.request.Request(
         url, headers={"User-Agent": "patchnotes-python/2.2"}
     )
     with urllib.request.urlopen(req, timeout=10) as resp:
-        return json.loads(resp.read().decode("utf-8", errors="replace"))
+        data: _PyPIProject = json.loads(
+            resp.read().decode("utf-8", errors="replace")
+        )
+        return data
 
 
 def find_github_repo(package: str) -> tuple[str, str]:
@@ -149,7 +165,7 @@ _REQ_LINE = re.compile(
 )
 
 
-def parse_requirements(text: str) -> dict:
+def parse_requirements(text: str) -> dict[str, str]:
     """Extract ``name==version`` pins from a requirements file.
 
     Unpinned lines (>=, ~=, bare names, -r includes, URLs) are ignored —
@@ -163,7 +179,9 @@ def parse_requirements(text: str) -> dict:
     return pins
 
 
-def diff_requirements(old_text: str, new_text: str) -> tuple:
+def diff_requirements(
+    old_text: str, new_text: str
+) -> tuple[list[tuple[str, str, str]], list[str], list[str]]:
     """Compare two requirements files.
 
     Returns (changed, added, removed) where changed is a list of

@@ -19,3 +19,14 @@ from ._models import (  # noqa: F401
     Release,
     _parse_semver,
 )
+
+#: Everything this shim re-exports for 1.x compatibility.
+__all__ = [
+    "parse",
+    "parse_file",
+    "Changelog",
+    "ChangeType",
+    "Entry",
+    "Release",
+    "_parse_semver",
+]

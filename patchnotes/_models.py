@@ -35,22 +35,50 @@ class ChangeType(str, Enum):
 _SEMVER_ISH = re.compile(r"^v?\d+(\.\d+){0,2}([-+.].*)?$")
 
 
-def _parse_semver(version: str) -> tuple:
-    """Parse a version string into a sortable tuple."""
+def _parse_semver(version: str) -> tuple[object, ...]:
+    """Parse a version string into a sortable tuple.
+
+    Ordering follows the precedence rules in the Semantic Versioning
+    specification, section 11: the numeric ``major.minor.patch`` triple is
+    compared first; a pre-release version sorts *below* the associated
+    normal version (``1.0.0-rc.1`` < ``1.0.0``); pre-release identifiers are
+    then compared field by field, with numeric identifiers ordering below
+    alphanumeric ones and a longer identifier list outranking a shorter
+    prefix. Build metadata is ignored, as the specification requires.
+
+    Version strings that are not strictly conformant degrade gracefully: a
+    leading ``v`` is stripped, omitted components default to zero, and a
+    non-numeric component is read as zero rather than raising.
+    """
     if version.lower() == "unreleased":
-        return (float("inf"),) * 3
-    v = version.lstrip("v")
-    numeric = re.split(r"[-+]", v)[0]
-    parts = numeric.split(".")
-    result = []
-    for p in parts[:3]:
+        inf = float("inf")
+        return (inf, inf, inf, inf, ())
+
+    v = version.lstrip("vV")
+    # build metadata ('+sha') never participates in precedence
+    v = v.split("+", 1)[0]
+    numeric, separator, prerelease = v.partition("-")
+
+    core: list[int] = []
+    for part in numeric.split(".")[:3]:
         try:
-            result.append(int(p))
+            core.append(int(part))
         except ValueError:
-            result.append(0)
-    while len(result) < 3:
-        result.append(0)
-    return tuple(result)
+            core.append(0)
+    while len(core) < 3:
+        core.append(0)
+
+    # rank 1 outranks rank 0, so a normal release beats any of its pre-releases
+    if not separator or not prerelease:
+        return (core[0], core[1], core[2], 1, ())
+
+    fields: list[tuple[int, int, str]] = []
+    for identifier in prerelease.split("."):
+        if identifier.isdigit():
+            fields.append((0, int(identifier), ""))
+        else:
+            fields.append((1, 0, identifier))
+    return (core[0], core[1], core[2], 0, tuple(fields))
 
 
 @dataclass
@@ -60,10 +88,10 @@ class Entry:
     text: str
     change_type: ChangeType
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Entry({self.change_type.value}: {self.text!r})"
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, str]:
         return {"text": self.text, "change_type": self.change_type.value}
 
 
@@ -92,7 +120,7 @@ class Release:
             result.setdefault(entry.change_type.value, []).append(entry)
         return result
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, object]:
         return {
             "version": self.version,
             "release_date": self.release_date.isoformat()
@@ -106,7 +134,7 @@ class Release:
             },
         }
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         d = self.release_date or "unreleased"
         return f"Release(v{self.version}, {d}, {len(self.entries)} entries)"
 
@@ -119,7 +147,7 @@ class Changelog:
     title: str = "Changelog"
     description: str = ""
     #: Keep a Changelog compare-link footnotes: {"1.2.0": "https://.../compare/..."}.
-    links: dict = field(default_factory=dict)
+    links: dict[str, str] = field(default_factory=dict)
     #: Issues collected while parsing (lenient mode). Excluded from repr
     #: and from to_dict() for backward compatibility; use validate().
     issues: list[ValidationIssue] = field(default_factory=list, repr=False, compare=False)
@@ -214,7 +242,7 @@ class Changelog:
             return issues
 
         seen: set[str] = set()
-        prev_key: Optional[tuple] = None
+        prev_key: Optional[tuple[object, ...]] = None
         for r in self.releases:
             if r.version in seen:
                 issues.append(
@@ -370,7 +398,7 @@ class Changelog:
 
     # ── Serialization ─────────────────────────────────────────────────────
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, object]:
         return {
             "title": self.title,
             "description": self.description,
@@ -448,7 +476,8 @@ class Changelog:
             )
             try:
                 with urllib.request.urlopen(req, timeout=10) as resp:
-                    return resp.read().decode("utf-8", errors="replace")
+                    body: str = resp.read().decode("utf-8", errors="replace")
+                    return body
             except urllib.error.HTTPError as e:
                 if e.code == 404:
                     return None
@@ -469,5 +498,5 @@ class Changelog:
             format = "yaml"
         return parse(text, format=format, strict=strict)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Changelog({len(self.releases)} releases)"

@@ -29,9 +29,13 @@ something belongs in the core, in a pluggable format parser, or in the CLI.
 ```bash
 git clone https://github.com/Londopy/patchnotes.git
 cd patchnotes
-pip install -e .
-pip install pytest mypy
+pip install -e ".[mkdocs]"
+pip install pytest mypy types-PyYAML
 ```
+
+Install the `mkdocs` extra even if you are not touching the documentation
+plugin: without it, `tests/test_v24.py` skips the whole module (you will see
+`163 passed, 1 skipped` instead of `180 passed`).
 
 Run the test suite:
 
@@ -39,7 +43,8 @@ Run the test suite:
 pytest -q
 ```
 
-Type-check (the project is checked under `mypy --strict`):
+Type-check (the project is checked under `mypy --strict`, and must stay clean
+both with and without the optional `mkdocs` extra installed):
 
 ```bash
 mypy patchnotes

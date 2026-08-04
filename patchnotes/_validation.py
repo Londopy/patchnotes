@@ -41,7 +41,7 @@ class ValidationIssue:
         loc = f"line {self.line}: " if self.line is not None else ""
         return f"[{self.severity.value.upper()}] {self.code} {loc}{self.message}"
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, object]:
         return {
             "code": self.code,
             "message": self.message,

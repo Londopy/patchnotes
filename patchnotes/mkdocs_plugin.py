@@ -24,15 +24,22 @@ Off-spec changelogs render best-effort (the parser is lenient); run
 from __future__ import annotations
 
 import os
+from typing import TYPE_CHECKING, Optional
 
 try:
     from mkdocs.config import config_options
+    from mkdocs.config.base import LegacyConfig
     from mkdocs.plugins import BasePlugin
 except ImportError as e:  # pragma: no cover
     raise ImportError(
         "The patchnotes mkdocs plugin requires mkdocs. "
         "Install it with: pip install mkdocs"
     ) from e
+
+if TYPE_CHECKING:
+    from mkdocs.config.defaults import MkDocsConfig
+    from mkdocs.structure.files import Files
+    from mkdocs.structure.pages import Page
 
 MARKER = "<!-- patchnotes -->"
 
@@ -67,14 +74,26 @@ _EMBED_CSS = """
 """
 
 
-class PatchnotesPlugin(BasePlugin):
+# mkdocs' BasePlugin.__init_subclass__ carries no annotations, so mypy flags
+# subclassing it as a call to an untyped function; mkdocs ships no stubs to fix
+# that upstream. When mkdocs is not installed at all (it is an optional extra),
+# BasePlugin resolves to Any instead and 'misc' fires rather than
+# 'no-untyped-call' — hence both codes, with warn_unused_ignores disabled for
+# this module in pyproject.toml.
+class PatchnotesPlugin(BasePlugin[LegacyConfig]):  # type: ignore[no-untyped-call,misc]
     """Replaces ``<!-- patchnotes -->`` markers with the rendered changelog."""
 
     config_scheme = (
         ("file", config_options.Type(str, default="CHANGELOG.md")),
     )
 
-    def on_page_markdown(self, markdown, page=None, config=None, files=None):
+    def on_page_markdown(
+        self,
+        markdown: str,
+        page: Optional[Page] = None,
+        config: Optional[MkDocsConfig] = None,
+        files: Optional[Files] = None,
+    ) -> str:
         if MARKER not in markdown:
             return markdown
 

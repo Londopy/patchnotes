@@ -19,8 +19,8 @@ authors:
 repository-code: "https://github.com/Londopy/patchnotes"
 url: "https://github.com/Londopy/patchnotes"
 license: MIT
-version: 2.4.0
-date-released: "2026-07-19"
+version: 2.5.1
+date-released: "2026-08-04"
 keywords:
   - changelog
   - keep a changelog

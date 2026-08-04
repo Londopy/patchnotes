@@ -22,9 +22,14 @@ import argparse
 import json
 import os
 import sys
+from typing import TYPE_CHECKING, Callable, Optional, Sequence
 
 from . import __version__, parse
 from ._validation import Severity
+
+if TYPE_CHECKING:
+    from ._models import Changelog, Release
+    from ._validation import ValidationIssue
 
 EXIT_OK = 0
 EXIT_FAIL = 1
@@ -55,7 +60,9 @@ COMMANDS = {
 _TRAILING_FILE_OK = ("validate", "fix")
 
 
-def _bind_params(parser, args) -> None:
+def _bind_params(
+    parser: argparse.ArgumentParser, args: argparse.Namespace
+) -> None:
     """Validate parameter counts and bind them to named attributes."""
     lo, hi = COMMANDS.get(args.command, (0, 0))
     got = len(args.params)
@@ -78,7 +85,7 @@ def _bind_params(parser, args) -> None:
         args.output_path = args.params[0]
 
 
-def main(argv=None) -> int:
+def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(
         prog="patchnotes",
         description="Parse, query, and validate changelogs "
@@ -324,7 +331,7 @@ def main(argv=None) -> int:
 
 # ── Commands ──────────────────────────────────────────────────────────────────
 
-def _cmd_summary(cl, args) -> int:
+def _cmd_summary(cl: "Changelog", args: argparse.Namespace) -> int:
     if args.format == "json":
         print(cl.to_json())
         return EXIT_OK
@@ -340,7 +347,9 @@ def _cmd_summary(cl, args) -> int:
     return EXIT_OK
 
 
-def _cmd_single(release, empty_msg: str, args) -> int:
+def _cmd_single(
+    release: Optional["Release"], empty_msg: str, args: argparse.Namespace
+) -> int:
     if not release:
         if args.format == "json":
             print("null")
@@ -354,7 +363,7 @@ def _cmd_single(release, empty_msg: str, args) -> int:
     return EXIT_OK
 
 
-def _cmd_diff(cl, args) -> int:
+def _cmd_diff(cl: "Changelog", args: argparse.Namespace) -> int:
     try:
         releases = cl.diff(args.from_version, args.to_version)
     except ValueError as e:
@@ -373,7 +382,7 @@ def _cmd_diff(cl, args) -> int:
     return EXIT_OK
 
 
-def _cmd_breaking(cl, args) -> int:
+def _cmd_breaking(cl: "Changelog", args: argparse.Namespace) -> int:
     changes = cl.all_breaking_changes()
     if args.format == "json":
         print(json.dumps(
@@ -393,7 +402,9 @@ def _cmd_breaking(cl, args) -> int:
     return EXIT_OK
 
 
-def _cmd_validate(cl, args, strict: bool, github: bool) -> int:
+def _cmd_validate(
+    cl: "Changelog", args: argparse.Namespace, strict: bool, github: bool
+) -> int:
     issues = cl.validate()
     errors = [i for i in issues if i.severity is Severity.ERROR]
     warnings = [i for i in issues if i.severity is Severity.WARNING]
@@ -432,7 +443,9 @@ def _cmd_validate(cl, args, strict: bool, github: bool) -> int:
     return EXIT_FAIL if failed else EXIT_OK
 
 
-def _writer_for(path: str, args):
+def _writer_for(
+    path: str, args: argparse.Namespace
+) -> Callable[["Changelog"], str]:
     """Pick the output renderer (markdown or YAML) for a target path."""
     from ._write import to_markdown, to_yaml
 
@@ -443,7 +456,7 @@ def _writer_for(path: str, args):
     return lambda cl: to_markdown(cl, repo_url=args.repo_url)
 
 
-def _cmd_bump(cl, args) -> int:
+def _cmd_bump(cl: "Changelog", args: argparse.Namespace) -> int:
     import datetime
 
     if args.file == "-":
@@ -459,7 +472,7 @@ def _cmd_bump(cl, args) -> int:
                   file=sys.stderr)
             return EXIT_USAGE
 
-    collected_files: list = []
+    collected_files: list[str] = []
     if args.collect:
         from ._fragments import collect, fragments_dir
         collected_files = collect(cl, fragments_dir(args.file, args.fragments_dir))
@@ -486,7 +499,7 @@ def _cmd_bump(cl, args) -> int:
     return EXIT_OK
 
 
-def _cmd_convert(cl, args) -> int:
+def _cmd_convert(cl: "Changelog", args: argparse.Namespace) -> int:
     out = args.output_path
     if not out.lower().endswith((".md", ".markdown", ".yml", ".yaml")) and out != "-":
         print(
@@ -506,7 +519,7 @@ def _cmd_convert(cl, args) -> int:
     return EXIT_OK
 
 
-def _cmd_fix(cl, args, github: bool) -> int:
+def _cmd_fix(cl: "Changelog", args: argparse.Namespace, github: bool) -> int:
     issues = cl.validate()
     fixable = [i for i in issues if i.line is not None]
     remaining = [i for i in issues if i.line is None]
@@ -532,7 +545,7 @@ def _cmd_fix(cl, args, github: bool) -> int:
     return EXIT_OK
 
 
-def _cmd_check_version(cl, args) -> int:
+def _cmd_check_version(cl: "Changelog", args: argparse.Namespace) -> int:
     from ._project_version import discover_target, extract_version, normalize
 
     latest = cl.latest()
@@ -570,7 +583,7 @@ def _cmd_check_version(cl, args) -> int:
     return EXIT_OK
 
 
-def _cmd_fragment(args) -> int:
+def _cmd_fragment(args: argparse.Namespace) -> int:
     from ._fragments import add_fragment, fragments_dir, list_fragments
 
     directory = fragments_dir(args.file, args.fragments_dir)
@@ -617,7 +630,7 @@ def _cmd_fragment(args) -> int:
     return EXIT_USAGE
 
 
-def _cmd_init(args) -> int:
+def _cmd_init(args: argparse.Namespace) -> int:
     from ._scaffold import write_changelog, write_workflow
 
     try:
@@ -639,7 +652,7 @@ def _cmd_init(args) -> int:
     return EXIT_OK
 
 
-def _cmd_dep(args) -> int:
+def _cmd_dep(args: argparse.Namespace) -> int:
     if args.requirements:
         if len(args.params) != 2:
             print("Usage: patchnotes dep --requirements OLD.txt NEW.txt",
@@ -687,7 +700,7 @@ def _cmd_dep(args) -> int:
     return EXIT_OK
 
 
-def _cmd_dep_requirements(args) -> int:
+def _cmd_dep_requirements(args: argparse.Namespace) -> int:
     from ._depdiff import (
         diff_requirements,
         fetch_dep_changelog,
@@ -759,7 +772,9 @@ def _cmd_dep_requirements(args) -> int:
     return EXIT_OK
 
 
-def _cmd_badge(cl, args, strict: bool = False) -> int:
+def _cmd_badge(
+    cl: "Changelog", args: argparse.Namespace, strict: bool = False
+) -> int:
     """Print a shields.io endpoint JSON describing the changelog's state.
 
     The colour encodes validation, the message encodes the version, so a
@@ -774,6 +789,7 @@ def _cmd_badge(cl, args, strict: bool = False) -> int:
     warnings = sum(1 for i in issues if i.severity is Severity.WARNING)
     version = f"v{latest.version}" if latest else None
 
+    message: Optional[str]
     if errors or (strict and warnings):
         message, color = "invalid", "red"
     elif not latest:
@@ -801,7 +817,7 @@ def _cmd_badge(cl, args, strict: bool = False) -> int:
 
 # ── Output helpers ────────────────────────────────────────────────────────────
 
-def _print_issue(issue, file: str, github: bool) -> None:
+def _print_issue(issue: "ValidationIssue", file: str, github: bool) -> None:
     if github:
         level = "error" if issue.severity is Severity.ERROR else "warning"
         loc = f",line={issue.line}" if issue.line is not None else ""
@@ -811,7 +827,7 @@ def _print_issue(issue, file: str, github: bool) -> None:
         print(f"  {issue}", file=sys.stderr)
 
 
-def _print_release(r) -> None:
+def _print_release(r: "Release") -> None:
     date_str = f" — {r.release_date}" if r.release_date else ""
     flags = []
     if r.yanked:

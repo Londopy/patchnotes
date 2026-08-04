@@ -41,7 +41,7 @@ _MISSING_PYYAML_MSG = (
 )
 
 
-def _load_yaml(text: str):
+def _load_yaml(text: str) -> object:
     try:
         import yaml
     except ImportError as e:  # pragma: no cover - depends on environment

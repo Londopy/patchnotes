@@ -240,8 +240,8 @@ class MarkdownFormat(FormatParser):
 
     @staticmethod
     def _normalize_setext(
-        lines: list, issues: list
-    ) -> list:
+        lines: list[str], issues: list[ValidationIssue]
+    ) -> list[str]:
         """Rewrite RST/setext version headers ("2.3.0" over ----) into
         '## [2.3.0] - date' so changelogs like requests' HISTORY.md parse."""
         out = list(lines)

@@ -19,7 +19,7 @@ _COMPARE_RE = re.compile(r"^(?P<base>.+?)/compare/(?P<from>.+?)\.\.\.(?P<to>.+)$
 
 def _generated_links(
     changelog: "Changelog", repo_url: str, tag_prefix: str = "v"
-) -> dict:
+) -> dict[str, str]:
     """Generate Keep a Changelog compare-link footnotes for every release."""
     repo_url = repo_url.rstrip("/")
     links: dict[str, str] = {}
@@ -128,13 +128,13 @@ def to_yaml(changelog: "Changelog") -> str:
     """
     import yaml
 
-    data: dict = {"title": changelog.title}
+    data: dict[str, object] = {"title": changelog.title}
     if changelog.description:
         data["description"] = changelog.description
 
     releases = []
     for r in changelog.releases:
-        item: dict = {}
+        item: dict[str, object] = {}
         if r.is_unreleased:
             item["unreleased"] = True
         else:

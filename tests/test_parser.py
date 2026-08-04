@@ -7,6 +7,7 @@ Run with: pytest tests/
 import pytest
 from datetime import date
 from patchnotes import parse, parse_file, Changelog, Release, Entry, ChangeType
+from patchnotes._models import _parse_semver
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -321,3 +322,56 @@ class TestParseFile:
     def test_parse_file_not_found(self):
         with pytest.raises(FileNotFoundError):
             parse_file("/nonexistent/CHANGELOG.md")
+
+
+# ── semantic version precedence (semver.org §11) ──────────────────────────────
+
+class TestSemverPrecedence:
+    """Ordering must follow the precedence rules in the SemVer spec."""
+
+    #: the exact chain given as the example in semver.org §11
+    SPEC_CHAIN = [
+        "1.0.0-alpha",
+        "1.0.0-alpha.1",
+        "1.0.0-alpha.beta",
+        "1.0.0-beta",
+        "1.0.0-beta.2",
+        "1.0.0-beta.11",
+        "1.0.0-rc.1",
+        "1.0.0",
+    ]
+
+    def test_spec_example_chain_is_strictly_increasing(self):
+        keys = [_parse_semver(v) for v in self.SPEC_CHAIN]
+        for earlier, later, a, b in zip(
+            keys, keys[1:], self.SPEC_CHAIN, self.SPEC_CHAIN[1:]
+        ):
+            assert earlier < later, f"{a} should sort below {b}"
+
+    def test_prerelease_sorts_below_its_own_release(self):
+        assert _parse_semver("1.0.0-rc.1") < _parse_semver("1.0.0")
+
+    def test_build_metadata_is_ignored(self):
+        assert _parse_semver("1.0.0+build.99") == _parse_semver("1.0.0")
+
+    def test_omitted_components_default_to_zero(self):
+        assert _parse_semver("v1.2") == _parse_semver("1.2.0")
+
+    def test_non_numeric_component_does_not_raise(self):
+        assert _parse_semver("1.x.0") == _parse_semver("1.0.0")
+
+    def test_unreleased_outranks_everything(self):
+        assert _parse_semver("unreleased") > _parse_semver("99.99.99")
+
+    def test_latest_does_not_return_a_release_candidate(self):
+        """Regression: latest() used to return the RC, because the
+        pre-release suffix was discarded and max() broke the tie by
+        first-encountered."""
+        cl = parse(
+            "# C\n\n"
+            "## [1.0.0-rc.1] - 2024-01-01\n### Added\n- rc\n\n"
+            "## [1.0.0] - 2024-01-02\n### Added\n- final\n"
+        )
+        latest = cl.latest()
+        assert latest is not None
+        assert latest.version == "1.0.0"

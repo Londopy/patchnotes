@@ -32,7 +32,9 @@ _RULE_DESCRIPTIONS = {
 }
 
 
-def to_sarif(issues: list, file: str, tool_version: str) -> dict:
+def to_sarif(
+    issues: list[ValidationIssue], file: str, tool_version: str
+) -> dict[str, object]:
     """Build a SARIF 2.1.0 document from validation issues."""
     uri = file.replace("\\", "/")
     rule_ids = sorted({i.code for i in issues} | set())
@@ -48,12 +50,12 @@ def to_sarif(issues: list, file: str, tool_version: str) -> dict:
     ]
     results = []
     for i in issues:
-        result = {
+        result: dict[str, object] = {
             "ruleId": i.code,
             "level": "error" if i.severity is Severity.ERROR else "warning",
             "message": {"text": i.message},
         }
-        location: dict = {"artifactLocation": {"uri": uri}}
+        location: dict[str, object] = {"artifactLocation": {"uri": uri}}
         if i.line is not None:
             location["region"] = {"startLine": i.line}
         result["locations"] = [{"physicalLocation": location}]

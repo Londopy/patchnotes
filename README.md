@@ -1,10 +1,10 @@
 # patchnotes
 
-[![Downloads](https://img.shields.io/pepy/dt/patchnotes)](https://pepy.tech/project/patchnotes) [![PyPI](https://img.shields.io/pypi/v/patchnotes)](https://pypi.org/project/patchnotes/) [![Python versions](https://img.shields.io/pypi/pyversions/patchnotes)](https://pypi.org/project/patchnotes/) [![Publish to PyPI](https://github.com/Londopy/patchnotes/actions/workflows/publish.yml/badge.svg)](https://github.com/Londopy/patchnotes/actions/workflows/publish.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://github.com/Londopy/patchnotes/blob/main/LICENSE) [![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)](https://github.com/Londopy/patchnotes/blob/main/pyproject.toml) [![Typed](https://img.shields.io/badge/typed-yes-blue)](https://github.com/Londopy/patchnotes) [![changelog](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Londopy/patchnotes/gh-pages/changelog-badge.json)](https://github.com/Londopy/patchnotes/blob/main/CHANGELOG.md) [![Keep a Changelog](https://img.shields.io/badge/changelog-keep--a--changelog-orange)](https://keepachangelog.com)
+[![Downloads](https://img.shields.io/pepy/dt/patchnotes)](https://pepy.tech/project/patchnotes) [![PyPI](https://img.shields.io/pypi/v/patchnotes)](https://pypi.org/project/patchnotes/) [![Python versions](https://img.shields.io/pypi/pyversions/patchnotes)](https://pypi.org/project/patchnotes/) [![Publish to PyPI](https://github.com/Londopy/patchnotes/actions/workflows/publish.yml/badge.svg)](https://github.com/Londopy/patchnotes/actions/workflows/publish.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://github.com/Londopy/patchnotes/blob/main/LICENSE) [![Dependencies](https://img.shields.io/badge/dependencies-1-brightgreen)](https://github.com/Londopy/patchnotes/blob/main/pyproject.toml) [![Typed](https://img.shields.io/badge/typed-yes-blue)](https://github.com/Londopy/patchnotes) [![changelog](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Londopy/patchnotes/gh-pages/changelog-badge.json)](https://github.com/Londopy/patchnotes/blob/main/CHANGELOG.md) [![Keep a Changelog](https://img.shields.io/badge/changelog-keep--a--changelog-orange)](https://keepachangelog.com)
 
 **Your `CHANGELOG.md` is the one file in every repo you can't query. patchnotes fixes that.**
 
-Parse [Keep a Changelog](https://keepachangelog.com) files — and YAML changelogs — into structured Python objects. Query them, diff versions, validate them in CI, and render them to HTML, RSS, or plain text. Pure Python, zero dependencies, fully typed.
+Parse [Keep a Changelog](https://keepachangelog.com) files — and YAML changelogs — into structured Python objects. Query them, diff versions, validate them in CI, and render them to HTML, RSS, or plain text. Pure Python, one dependency, fully typed.
 
 ```python
 import patchnotes
@@ -32,7 +32,7 @@ pip install patchnotes
 - **Never crashes on messy input** — lenient by default: off-spec dates, misspelled headers, and bracket-less versions are recovered and logged with stable codes (`PN1xx`) instead of blowing up.
 - **Gate broken changelogs in CI** — strict mode fails the build and emits inline GitHub PR annotations pinned to the exact file and line.
 - **Render anywhere** — export to HTML, RSS, JSON, plain text, or back to Markdown/YAML.
-- **Zero dependencies, fully typed** — pure Python 3.10+, nothing to install but the package itself.
+- **Almost no dependencies, fully typed** — pure Python 3.10+, with PyYAML as the single runtime requirement.
 
 ## How is this different from git-cliff?
 

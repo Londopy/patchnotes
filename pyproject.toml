@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "patchnotes"
-version = "2.5.0"
+version = "2.5.1"
 description = "Parse, query, and validate changelogs (Keep a Changelog markdown, YAML) in Python and CI"
 readme = "README.md"
 license = { text = "MIT" }
@@ -48,3 +48,16 @@ testpaths = ["tests"]
 [tool.mypy]
 python_version = "3.10"
 strict = true
+
+# The mkdocs plugin is an optional extra. Type-checking it must succeed both
+# with and without mkdocs installed, so mkdocs' own (unstubbed) types are
+# allowed to resolve to Any, and the one unavoidable ignore below is exempt
+# from the unused-ignore warning: exactly which error code fires there depends
+# on whether mkdocs is present.
+[[tool.mypy.overrides]]
+module = "mkdocs.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "patchnotes.mkdocs_plugin"
+warn_unused_ignores = false
