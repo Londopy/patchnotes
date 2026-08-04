@@ -1,0 +1,32 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using these metadata."
+title: "patchnotes: parse, query, and validate software changelogs as structured data"
+abstract: >-
+  patchnotes parses Keep a Changelog markdown and YAML changelogs into typed
+  Python objects, making the release history of a software project queryable,
+  diffable, and machine-validatable. It recovers from off-specification input
+  rather than failing, reports problems as stable diagnostic codes with line
+  numbers, and renders changelogs to HTML, RSS, JSON, SARIF, and plain text.
+  A command-line interface, a GitHub Action, pre-commit hooks, and an mkdocs
+  plugin allow changelog quality to be enforced in continuous integration.
+type: software
+authors:
+  - family-names: Chowdhury
+    given-names: London
+    orcid: "https://orcid.org/0009-0006-2895-2857"
+    affiliation: "General Engineering Program, College of Engineering, California Polytechnic State University, San Luis Obispo"
+    email: "Londopy@protonmail.com"
+repository-code: "https://github.com/Londopy/patchnotes"
+url: "https://github.com/Londopy/patchnotes"
+license: MIT
+version: 2.4.0
+date-released: "2026-07-19"
+keywords:
+  - changelog
+  - keep a changelog
+  - semantic versioning
+  - research software
+  - software provenance
+  - reproducibility
+  - continuous integration
+  - static analysis
