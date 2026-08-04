@@ -1,6 +1,6 @@
 # patchnotes
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21783509.svg?v=2)](https://doi.org/10.5281/zenodo.21783509)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21783508.svg)](https://doi.org/10.5281/zenodo.21783508)
 [![Downloads](https://img.shields.io/pepy/dt/patchnotes)](https://pepy.tech/project/patchnotes) [![PyPI](https://img.shields.io/pypi/v/patchnotes)](https://pypi.org/project/patchnotes/) [![Python versions](https://img.shields.io/pypi/pyversions/patchnotes)](https://pypi.org/project/patchnotes/) [![Publish to PyPI](https://github.com/Londopy/patchnotes/actions/workflows/publish.yml/badge.svg)](https://github.com/Londopy/patchnotes/actions/workflows/publish.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://github.com/Londopy/patchnotes/blob/main/LICENSE) [![Dependencies](https://img.shields.io/badge/dependencies-1-brightgreen)](https://github.com/Londopy/patchnotes/blob/main/pyproject.toml) [![Typed](https://img.shields.io/badge/typed-yes-blue)](https://github.com/Londopy/patchnotes) [![changelog](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Londopy/patchnotes/gh-pages/changelog-badge.json)](https://github.com/Londopy/patchnotes/blob/main/CHANGELOG.md) [![Keep a Changelog](https://img.shields.io/badge/changelog-keep--a--changelog-orange)](https://keepachangelog.com)
 
 **Your `CHANGELOG.md` is the one file in every repo you can't query. patchnotes fixes that.**
