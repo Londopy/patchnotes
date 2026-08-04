@@ -130,7 +130,20 @@ Issue codes are stable (grep-able in CI logs): `PN1xx` are errors (data was lost
 
 ### Formats
 
-Formats are pluggable. `markdown` (Keep a Changelog) and `yaml` are built in; `format="auto"` picks by file extension, then content.
+Formats are pluggable. `markdown` (Keep a Changelog), `rst` (reStructuredText), and `yaml` are built in; `format="auto"` picks by file extension, then content.
+
+```python
+cl = patchnotes.parse_file("CHANGES.rst")     # rST detected by extension
+cl = patchnotes.parse(text, format="rst")
+```
+
+The rST parser learns the document's heading hierarchy from its section
+adornments rather than a fixed marker, so towncrier output, `docs/CHANGES.rst`,
+and hand-written histories all work. Directives and comments are skipped, and
+inline markup (``` ``literal`` ```, `` `text <url>`_ ``, `` :issue:`42` ``) is
+reduced to plain text. Setext-underlined *markdown* stays with the markdown
+parser — the two shapes are ambiguous, so rST is only auto-detected on content
+markdown can't produce.
 
 YAML changelog schema:
 

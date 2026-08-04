@@ -1,0 +1,135 @@
+{
+ "packages": {
+  "label": "package-level (all)",
+  "n": 500,
+  "resolvable_repo": 466,
+  "resolvable_repo_pct": 93.2,
+  "markdown_changelog": 163,
+  "markdown_changelog_pct": 32.6,
+  "rst_changelog": 85,
+  "rst_changelog_pct": 17.0,
+  "any_changelog_pct": 49.6,
+  "parseable": 200,
+  "parseable_pct": 40.0,
+  "parseable_of_files_pct": 80.6,
+  "parseable_md": 130,
+  "parseable_rst": 70,
+  "clean_md": 5,
+  "clean_rst": 19,
+  "strict_clean": 24,
+  "strict_clean_pct": 4.8,
+  "zero_release_files": 48
+ },
+ "packages_confident": {
+  "label": "package-level (confidence >= medium)",
+  "n": 455,
+  "resolvable_repo": 455,
+  "resolvable_repo_pct": 100.0,
+  "markdown_changelog": 157,
+  "markdown_changelog_pct": 34.5,
+  "rst_changelog": 85,
+  "rst_changelog_pct": 18.7,
+  "any_changelog_pct": 53.2,
+  "parseable": 195,
+  "parseable_pct": 42.9,
+  "parseable_of_files_pct": 80.6,
+  "parseable_md": 125,
+  "parseable_rst": 70,
+  "clean_md": 5,
+  "clean_rst": 19,
+  "strict_clean": 24,
+  "strict_clean_pct": 5.3,
+  "zero_release_files": 47
+ },
+ "repos": {
+  "label": "repo-level (deduplicated)",
+  "n": 439,
+  "resolvable_repo": 439,
+  "resolvable_repo_pct": 100.0,
+  "markdown_changelog": 149,
+  "markdown_changelog_pct": 33.9,
+  "rst_changelog": 85,
+  "rst_changelog_pct": 19.4,
+  "any_changelog_pct": 53.3,
+  "parseable": 194,
+  "parseable_pct": 44.2,
+  "parseable_of_files_pct": 82.9,
+  "parseable_md": 124,
+  "parseable_rst": 70,
+  "clean_md": 5,
+  "clean_rst": 19,
+  "strict_clean": 24,
+  "strict_clean_pct": 5.5,
+  "zero_release_files": 40
+ },
+ "status_counts": {
+  "ok": 248,
+  "no-changelog-found": 218,
+  "no-github-repo": 34
+ },
+ "confidence_counts": {
+  "high": 439,
+  "None": 34,
+  "low": 11,
+  "medium": 16
+ },
+ "code_frequency_pct_of_markdown": {
+  "PN103": 62.1,
+  "PN201": 47.6,
+  "PN101": 39.5,
+  "PN203": 30.6,
+  "PN104": 23.4,
+  "PN204": 19.4,
+  "PN207": 19.4,
+  "PN206": 19.0,
+  "PN102": 8.5,
+  "PN202": 7.7,
+  "PN205": 1.6
+ },
+ "code_counts": {
+  "PN103": 154,
+  "PN201": 118,
+  "PN101": 98,
+  "PN203": 76,
+  "PN104": 58,
+  "PN204": 48,
+  "PN207": 48,
+  "PN206": 47,
+  "PN102": 21,
+  "PN202": 19,
+  "PN205": 4
+ },
+ "by_format": {
+  "markdown": {
+   "n": 163,
+   "code_pct": {
+    "PN103": 80.4,
+    "PN101": 57.1,
+    "PN201": 52.8,
+    "PN104": 35.0,
+    "PN203": 32.5,
+    "PN207": 29.4,
+    "PN206": 28.8,
+    "PN204": 20.2,
+    "PN102": 11.7,
+    "PN202": 4.9,
+    "PN205": 2.5
+   }
+  },
+  "rst": {
+   "n": 85,
+   "code_pct": {
+    "PN201": 37.6,
+    "PN103": 27.1,
+    "PN203": 27.1,
+    "PN204": 17.6,
+    "PN202": 12.9,
+    "PN101": 5.9,
+    "PN102": 2.4,
+    "PN104": 1.2
+   }
+  }
+ },
+ "n_packages": 500,
+ "n_distinct_repo_changelogs": 439
+}

@@ -105,3 +105,7 @@ register_format(_markdown.MarkdownFormat())
 from . import yaml_format as _yaml_format  # noqa: E402
 
 register_format(_yaml_format.YamlFormat())
+
+from . import rst as _rst  # noqa: E402
+
+register_format(_rst.RstFormat())

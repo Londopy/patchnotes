@@ -9,3 +9,9 @@ build/
 *.egg
 .venv/
 venv/
+
+# Ecosystem scan: HTTP response cache and resume scratch file. Regenerable
+# from scan_results.json + the script; ~300 MB, so archived separately
+# rather than tracked.
+research/cache/
+research/scan_partial.jsonl

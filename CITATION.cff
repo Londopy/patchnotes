@@ -16,6 +16,11 @@ authors:
     orcid: "https://orcid.org/0009-0006-2895-2857"
     affiliation: "General Engineering Program, College of Engineering, California Polytechnic State University, San Luis Obispo"
     email: "Londopy@protonmail.com"
+doi: "10.5281/zenodo.21783509"
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.21783509"
+    description: "Version DOI for the archived 2.5.1 release"
 repository-code: "https://github.com/Londopy/patchnotes"
 url: "https://github.com/Londopy/patchnotes"
 license: MIT

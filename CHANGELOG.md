@@ -4,6 +4,11 @@ Parse, query, and validate changelogs in Python and CI.
 
 ## [Unreleased]
 
+### Added
+
+- reStructuredText changelog parser (`patchnotes.parse(text, format="rst")`, or automatic for `.rst` files). Learns the document's own heading hierarchy from section adornments, skips directives and comments, and reduces inline rST markup to plain text. Issue codes match the markdown parser's, so quality is comparable across formats.
+- `research/`: an ecosystem scan over the 500 most-downloaded PyPI packages, measuring how many keep a changelog a machine can read. Results and method in `research/FINDINGS.md`.
+
 ### Changed
 
 - CI now dogfoods the badge: `ci.yml` publishes patchnotes' own changelog badge to the `gh-pages` branch on every push to main, and skips publishing on pull requests so fork PRs don't need a write token.
